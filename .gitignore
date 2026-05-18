@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.env
+
+# Database (do not commit the live DB)
+data/
+baluhome.db
+*.db
+
+# User uploads (binary data)
+uploads/
+
+# Static avatars (generated at runtime)
+static/avatars/
+
+# Nginx / system
+.htaccess
+
+# OS
+.DS_Store
+Thumbs.db

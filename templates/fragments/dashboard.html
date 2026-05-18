@@ -1,0 +1,67 @@
+<div class="page-dashboard">
+  <div class="page-header">
+    <h2>Perfil</h2>
+  </div>
+
+  <!-- Profile card -->
+  <div class="profile-card">
+    <div class="profile-avatar">{{ user.username[0] | upper }}</div>
+    <div class="profile-name">{{ user.username }}</div>
+    <div class="profile-role {% if user.role == 'admin' %}role-admin{% else %}role-user{% endif %}">
+      {% if user.role == 'admin' %}Administrador{% else %}Usuario{% endif %}
+    </div>
+    <div class="profile-stats">
+      <div class="stat">
+        <div class="stat-value">{{ song_count }}</div>
+        <div class="stat-label">Canciones</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">{{ user.created_at[:4] }}</div>
+        <div class="stat-label">Desde</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change username -->
+  <div class="settings-section">
+    <h3>Cambiar usuario</h3>
+    <form id="form-change-username" class="settings-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="change_username">
+      <div class="form-group">
+        <label>Nuevo nombre de usuario</label>
+        <input type="text" name="new_username" placeholder="Nuevo usuario"
+               value="{{ user.username }}" autocomplete="username" required>
+      </div>
+      <button type="submit" class="btn btn-secondary btn-full">Cambiar usuario</button>
+      <div class="form-msg" id="msg-username"></div>
+    </form>
+  </div>
+
+  <!-- Change password -->
+  <div class="settings-section">
+    <h3>Cambiar contraseña</h3>
+    <form id="form-change-password" class="settings-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="change_password">
+      <div class="form-group">
+        <label>Contraseña actual</label>
+        <input type="password" name="current_password" placeholder="Contraseña actual" autocomplete="current-password" required>
+      </div>
+      <div class="form-group">
+        <label>Nueva contraseña</label>
+        <input type="password" name="new_password" placeholder="Nueva contraseña" autocomplete="new-password" required>
+      </div>
+      <div class="form-group">
+        <label>Repetir contraseña</label>
+        <input type="password" name="new_password2" placeholder="Repite la nueva contraseña" autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="btn btn-secondary btn-full">Cambiar contraseña</button>
+      <div class="form-msg" id="msg-password"></div>
+    </form>
+  </div>
+
+  <div class="settings-section">
+    <a href="/logout" class="btn btn-danger btn-full">Cerrar sesión</a>
+  </div>
+</div>

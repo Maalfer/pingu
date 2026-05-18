@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <circle cx="150" cy="150" r="148" fill="#0c0c14"/>
+  <!-- Left ear -->
+  <path d="M82 92C60 112 36 152 28 196C24 222 36 252 58 256C76 258 92 244 96 218C100 188 96 150 88 118Z" fill="#0891b2"/>
+  <!-- Right ear -->
+  <path d="M218 92C240 112 264 152 272 196C276 222 264 252 242 256C224 258 208 244 204 218C200 188 204 150 212 118Z" fill="#0891b2"/>
+  <!-- Head -->
+  <ellipse cx="150" cy="124" rx="80" ry="72" fill="#06b6d4"/>
+  <!-- Left eye -->
+  <ellipse cx="122" cy="112" rx="15" ry="15" fill="#060c12"/>
+  <ellipse cx="116" cy="106" rx="5" ry="5" fill="#67e8f9" opacity="0.9"/>
+  <!-- Right eye -->
+  <ellipse cx="178" cy="112" rx="15" ry="15" fill="#060c12"/>
+  <ellipse cx="172" cy="106" rx="5" ry="5" fill="#67e8f9" opacity="0.9"/>
+  <!-- Nose -->
+  <ellipse cx="150" cy="168" rx="22" ry="14" fill="#060c12"/>
+  <!-- Mouth -->
+  <path d="M136 175 Q150 188 164 175" stroke="#035568" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="/static/favicon.ico">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>To-Do List — BaluHome</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="subapp-body">
+<div class="subapp-wrapper">
+
+  <header class="subapp-header">
+    <a href="/home" class="subapp-back">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </a>
+    <div class="subapp-title-wrap">
+      <h1 class="subapp-title">To-Do List</h1>
+    </div>
+    <button class="btn btn-sm btn-danger" id="btn-clear-done" style="flex-shrink:0">Limpiar</button>
+      <a href="/profile" class="header-friends-btn" id="friends-btn" title="Amigos">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      <span class="friends-badge" id="friends-badge" style="display:none"></span>
+    </a>
+  </header>
+
+  <div class="subapp-content">
+
+    <div class="shop-add-form">
+      <input type="text" id="new-item-input" class="shop-input" placeholder="Nueva tarea..." maxlength="200" autocomplete="off">
+      <button class="btn btn-primary btn-add-item" id="btn-add">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      </button>
+    </div>
+
+    <div id="todo-list" class="shop-list">
+      {% for item in items %}
+      <div class="shop-item {% if item.done %}done{% endif %}" data-id="{{ item.id }}">
+        <button class="shop-checkbox" data-id="{{ item.id }}">
+          <svg class="icon-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          <svg class="icon-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+        </button>
+        <span class="shop-text">{{ item.title }}</span>
+        <button class="shop-delete" data-id="{{ item.id }}">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </div>
+      {% else %}
+      <div class="empty-state" id="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <p>Sin tareas pendientes</p>
+        <p class="empty-sub">¡Añade tu primera tarea!</p>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CSRF = {{ csrf_token | tojson }};
+
+function api(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, csrf_token: CSRF })
+  }).then(r => r.json());
+}
+
+function checkEmpty() {
+  const items = document.querySelectorAll('.shop-item');
+  let empty = document.getElementById('empty-state');
+  if (items.length === 0) {
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.id = 'empty-state';
+      empty.className = 'empty-state';
+      empty.innerHTML = '<p>Sin tareas pendientes</p>';
+      document.getElementById('todo-list').appendChild(empty);
+    }
+  } else if (empty) {
+    empty.remove();
+  }
+}
+
+document.getElementById('btn-add').addEventListener('click', addItem);
+document.getElementById('new-item-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addItem();
+});
+
+async function addItem() {
+  const input = document.getElementById('new-item-input');
+  const title = input.value.trim();
+  if (!title) return;
+  input.disabled = true;
+  const res = await api('/api/todos/add', { title });
+  input.disabled = false;
+  if (res.success) {
+    input.value = '';
+    const list = document.getElementById('todo-list');
+    const empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.dataset.id = res.id;
+    div.innerHTML = `
+      <button class="shop-checkbox" data-id="${res.id}">
+        <svg class="icon-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        <svg class="icon-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+      </button>
+      <span class="shop-text">${escapeHtml(res.title)}</span>
+      <button class="shop-delete" data-id="${res.id}">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>`;
+    list.prepend(div);
+    input.focus();
+  } else {
+    (function(msg){
+    let t=document.getElementById('todo-toast');
+    if(!t){t=document.createElement('div');t.id='todo-toast';
+    t.style.cssText='position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid rgba(239,68,68,.4);color:#ff6b6b;padding:.6rem 1.25rem;border-radius:50px;font-size:.875rem;font-weight:600;z-index:999;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4)';
+    document.body.appendChild(t);}
+    t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',3000);
+  })(res.error || 'Error');
+  }
+}
+
+document.getElementById('todo-list').addEventListener('click', async e => {
+  const checkBtn = e.target.closest('.shop-checkbox');
+  const deleteBtn = e.target.closest('.shop-delete');
+  if (checkBtn) {
+    const id = parseInt(checkBtn.dataset.id);
+    const res = await api('/api/todos/toggle', { id });
+    if (res.success) {
+      document.querySelector(`.shop-item[data-id="${id}"]`).classList.toggle('done', res.done === 1);
+    }
+  }
+  if (deleteBtn) {
+    const id = parseInt(deleteBtn.dataset.id);
+    const res = await api('/api/todos/delete', { id });
+    if (res.success) {
+      document.querySelector(`.shop-item[data-id="${id}"]`).remove();
+      checkEmpty();
+    }
+  }
+});
+
+document.getElementById('btn-clear-done').addEventListener('click', async () => {
+  const doneItems = document.querySelectorAll('.shop-item.done');
+  if (doneItems.length === 0) return;
+  const res = await api('/api/todos/clear-done', {});
+  if (res.success) {
+    doneItems.forEach(el => el.remove());
+    checkEmpty();
+  }
+});
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+<script>
+fetch('/api/friends/pending-count').then(r=>r.json()).then(d=>{
+  if(d.count>0){const b=document.getElementById('friends-badge');if(b){b.textContent=d.count;b.style.display='';}}
+}).catch(()=>{});
+</script>
+<script>
+/* Last-page memory */
+(function() {
+  const path = location.pathname + location.search;
+  const skip = ['/', '/logout', '/register'];
+  if (!skip.includes(location.pathname)) {
+    localStorage.setItem('bh-last-page', path);
+  }
+})();
+</script>
+</body>
+</html>

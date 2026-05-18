@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="/static/favicon.ico">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>Gastos con {{ friend.username }} — BaluHome</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="subapp-body chat-app-body">
+<div class="subapp-wrapper chat-wrapper">
+
+  <header class="subapp-header chat-header-detail">
+    <a href="/gastos" class="subapp-back">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </a>
+    <div class="chat-header-user">
+      <div class="friend-avatar"><img src="/static/avatars/{{ friend.id }}.jpg" onerror="this.remove()" alt="">{{ friend.username[0]|upper }}</div>
+      <div>
+        <div class="chat-header-name">{{ friend.username }}</div>
+        <div class="chat-header-balance" id="balance-header" data-balance="{{ balance }}">
+          {% if balance > 0 %}
+          <span class="balance-pos">Te debe {{ '%.2f'|format(balance) }}€</span>
+          {% elif balance < 0 %}
+          <span class="balance-neg">Le debes {{ '%.2f'|format(balance|abs) }}€</span>
+          {% else %}
+          <span class="balance-zero">Estáis en paz</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="chat-messages" id="chat-messages">
+    {% if not transactions %}
+    <div class="empty-state" id="empty-state" style="padding:3rem 1rem">
+      <p>Sin transacciones aún</p>
+      <p class="empty-sub">Añade el primer gasto</p>
+    </div>
+    {% endif %}
+    {% for t in transactions %}
+    <div class="chat-msg {% if t.user_id == user_id %}chat-msg-mine{% else %}chat-msg-theirs{% endif %}" data-id="{{ t.id }}">
+      <div class="chat-bubble">
+        <div class="chat-payer">{% if t.user_id == user_id %}Tú{% else %}{{ friend.username }}{% endif %} pagó</div>
+        <div class="chat-desc">{{ t.description }}</div>
+        <div class="chat-amount">{{ '%.2f'|format(t.amount) }}€</div>
+      </div>
+      <div class="chat-meta">
+        {% if t.running_balance > 0 %}
+        <span class="balance-chip balance-chip-pos">{{ friend.username }} te debe {{ '%.2f'|format(t.running_balance) }}€</span>
+        {% elif t.running_balance < 0 %}
+        <span class="balance-chip balance-chip-neg">Le debes {{ '%.2f'|format(t.running_balance|abs) }}€</span>
+        {% else %}
+        <span class="balance-chip balance-chip-zero">En paz</span>
+        {% endif %}
+        <span class="chat-date">{{ t.created_at[:10] }}</span>
+        <button class="chat-delete-btn" data-id="{{ t.id }}" title="Eliminar">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="chat-input-area gastos-input-area">
+    <div class="gastos-input-form" id="add-txn-form">
+      <div class="gastos-who-row">
+        <span class="gastos-label">¿Quién pagó?</span>
+        <div class="gastos-who-toggle">
+          <button class="who-btn active" id="who-me">Yo</button>
+          <button class="who-btn" id="who-friend">{{ friend.username }}</button>
+        </div>
+      </div>
+      <div class="gastos-amount-row">
+        <input type="text" inputmode="decimal" id="txn-amount" placeholder="0.00" class="gastos-amount-input">
+        <span class="gastos-currency">€</span>
+      </div>
+      <div class="gastos-desc-row">
+        <input type="text" id="txn-desc" placeholder="¿En qué se gastó?" class="shop-input" maxlength="200" autocomplete="off" autocapitalize="sentences">
+        <button class="btn btn-primary" id="btn-add-txn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div id="txn-error" class="alert alert-error" style="display:none;margin-top:.5rem"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Undo Toast -->
+<div id="undo-toast" class="undo-toast" style="display:none">
+  <div class="undo-toast-text">
+    <svg viewBox="0 0 24 24" fill="currentColor" style="width:1rem;height:1rem;flex-shrink:0;color:#22c55e"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+    <span>Gasto añadido</span>
+  </div>
+  <button class="undo-btn" id="btn-undo">
+    <svg viewBox="0 0 24 24" fill="currentColor" style="width:.9rem;height:.9rem"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+    Deshacer
+    <span class="undo-timer" id="undo-timer">5</span>
+  </button>
+</div>
+
+<script>
+const CSRF = {{ csrf_token | tojson }};
+const FRIENDSHIP_ID = {{ friendship.id }};
+const USER_ID = {{ user_id }};
+const FRIEND_NAME = {{ friend.username | tojson }};
+let paidBy = 'me';
+let currentBalance = {{ balance }};
+let undoTimer = null;
+let undoTxnId = null;
+let undoCountdown = null;
+
+function api(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({...body, csrf_token: CSRF})
+  }).then(r => r.json());
+}
+
+// ── Who paid toggle ───────────────────────────────────────────────────────────
+document.getElementById('who-me').addEventListener('click', () => {
+  paidBy = 'me';
+  document.getElementById('who-me').classList.add('active');
+  document.getElementById('who-friend').classList.remove('active');
+});
+document.getElementById('who-friend').addEventListener('click', () => {
+  paidBy = 'friend';
+  document.getElementById('who-friend').classList.add('active');
+  document.getElementById('who-me').classList.remove('active');
+});
+
+// ── Balance header ────────────────────────────────────────────────────────────
+function updateBalanceHeader(bal) {
+  currentBalance = Math.round(bal * 100) / 100;
+  const hdr = document.getElementById('balance-header');
+  let html, cls;
+  if (currentBalance > 0) {
+    cls = 'balance-pos';
+    html = `<span class="${cls}">Te debe ${currentBalance.toFixed(2)}€</span>`;
+  } else if (currentBalance < 0) {
+    cls = 'balance-neg';
+    html = `<span class="${cls}">Le debes ${Math.abs(currentBalance).toFixed(2)}€</span>`;
+  } else {
+    html = `<span class="balance-zero">Estáis en paz</span>`;
+  }
+  hdr.innerHTML = html;
+}
+
+// ── Render chip for a given running balance ───────────────────────────────────
+function balanceChip(bal) {
+  const b = Math.round(bal * 100) / 100;
+  if (b > 0)  return `<span class="balance-chip balance-chip-pos">${FRIEND_NAME} te debe ${b.toFixed(2)}€</span>`;
+  if (b < 0)  return `<span class="balance-chip balance-chip-neg">Le debes ${Math.abs(b).toFixed(2)}€</span>`;
+  return `<span class="balance-chip balance-chip-zero">En paz</span>`;
+}
+
+// ── Append transaction bubble to DOM ─────────────────────────────────────────
+function appendTxnBubble(id, amount, description, paidByMe, runningBal, createdAt) {
+  const container = document.getElementById('chat-messages');
+  const empty = document.getElementById('empty-state');
+  if (empty) empty.remove();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const dateStr = createdAt ? createdAt.slice(0, 10) : today;
+  const side = paidByMe ? 'chat-msg-mine' : 'chat-msg-theirs';
+  const payerLabel = paidByMe ? 'Tú' : FRIEND_NAME;
+
+  const div = document.createElement('div');
+  div.className = `chat-msg ${side}`;
+  div.dataset.id = id;
+  div.innerHTML = `
+    <div class="chat-bubble">
+      <div class="chat-payer">${payerLabel} pagó</div>
+      <div class="chat-desc">${escHtml(description)}</div>
+      <div class="chat-amount">${amount.toFixed(2)}€</div>
+    </div>
+    <div class="chat-meta">
+      ${balanceChip(runningBal)}
+      <span class="chat-date">${dateStr}</span>
+      <button class="chat-delete-btn" data-id="${id}" title="Eliminar">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Undo toast ────────────────────────────────────────────────────────────────
+function showUndoToast(txnId) {
+  clearUndoState();
+  undoTxnId = txnId;
+  let secs = 5;
+
+  const toast   = document.getElementById('undo-toast');
+  const timerEl = document.getElementById('undo-timer');
+  timerEl.textContent = secs;
+  toast.style.display = 'flex';
+
+  undoCountdown = setInterval(() => {
+    secs--;
+    timerEl.textContent = secs;
+    if (secs <= 0) clearUndoState();
+  }, 1000);
+
+  undoTimer = setTimeout(clearUndoState, 5200);
+}
+
+function clearUndoState() {
+  clearTimeout(undoTimer);
+  clearInterval(undoCountdown);
+  undoTimer = undoCountdown = null;
+  undoTxnId = null;
+  document.getElementById('undo-toast').style.display = 'none';
+}
+
+document.getElementById('btn-undo').addEventListener('click', async () => {
+  if (!undoTxnId) return;
+  const id = undoTxnId;
+  clearUndoState();
+
+  const res = await api('/api/gastos/delete-transaction', {id});
+  if (res.success) {
+    // Remove bubble
+    const el = document.querySelector(`.chat-msg[data-id="${id}"]`);
+    if (el) {
+      el.classList.add('txn-removing');
+      setTimeout(() => el.remove(), 300);
+    }
+    // Revert balance
+    const wasMyTxn = el && el.classList.contains('chat-msg-mine');
+    // Reload to get correct running balances on all bubbles
+    // (just the header we can recalculate, but for accuracy reload)
+    setTimeout(() => location.reload(), 350);
+  } else {
+    alert(res.error || 'No se pudo deshacer');
+  }
+});
+
+// ── Add transaction ───────────────────────────────────────────────────────────
+document.getElementById('btn-add-txn').addEventListener('click', addTransaction);
+document.getElementById('txn-desc').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTransaction();
+});
+
+async function addTransaction() {
+  const amountEl = document.getElementById('txn-amount');
+  const descEl   = document.getElementById('txn-desc');
+  const errEl    = document.getElementById('txn-error');
+  const amount   = parseFloat(amountEl.value);
+  const description = descEl.value.trim();
+
+  errEl.style.display = 'none';
+  if (!amount || amount <= 0) { errEl.textContent = 'Cantidad inválida'; errEl.style.display = ''; return; }
+  if (!description)           { errEl.textContent = 'Añade una descripción'; errEl.style.display = ''; return; }
+
+  const btn = document.getElementById('btn-add-txn');
+  btn.disabled = true;
+
+  try {
+    const res = await api('/api/gastos/add-transaction', {
+      friendship_id: FRIENDSHIP_ID,
+      paid_by: paidBy,
+      amount,
+      description
+    });
+
+    if (res.success) {
+      amountEl.value = '';
+      descEl.value   = '';
+
+      const paidByMe    = res.paid_by_me;
+      const newBalance  = paidByMe ? currentBalance + amount : currentBalance - amount;
+      appendTxnBubble(res.id, amount, description, paidByMe, newBalance, res.created_at);
+      updateBalanceHeader(newBalance);
+      showUndoToast(res.id);
+    } else {
+      errEl.textContent = res.error || 'Error';
+      errEl.style.display = '';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+    errEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Delete (existing transactions) ───────────────────────────────────────────
+document.getElementById('chat-messages').addEventListener('click', async e => {
+  const btn = e.target.closest('.chat-delete-btn');
+  if (!btn) return;
+  if (!confirm('¿Eliminar esta transacción?')) return;
+  const id = parseInt(btn.dataset.id);
+  // If this is the current undo target, cancel undo first
+  if (id === undoTxnId) clearUndoState();
+  const res = await api('/api/gastos/delete-transaction', {id});
+  if (res.success) location.reload();
+  else alert(res.error || 'Error');
+});
+
+// Scroll to bottom on load
+document.getElementById('chat-messages').scrollTop = 99999;
+</script>
+<script>
+/* Last-page memory */
+(function() {
+  const path = location.pathname + location.search;
+  const skip = ['/', '/logout', '/register'];
+  if (!skip.includes(location.pathname)) {
+    localStorage.setItem('bh-last-page', path);
+  }
+})();
+</script>
+</body>
+</html>

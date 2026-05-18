@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="/static/favicon.ico">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>Amigos — BaluHome</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="subapp-body">
+<div class="subapp-wrapper">
+
+  <header class="subapp-header">
+    <a href="/home" class="subapp-back">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </a>
+    <div class="subapp-title-wrap">
+      <h1 class="subapp-title">Amigos</h1>
+    </div>
+  </header>
+
+  <div class="subapp-content">
+
+    {% set received = users | selectattr("status","eq","received") | list %}
+    {% set sent     = users | selectattr("status","eq","sent")     | list %}
+    {% set friends  = users | selectattr("status","eq","friend")   | list %}
+    {% set others   = users | selectattr("status","eq","none")     | list %}
+
+    {% if received %}
+    <div class="friends-section">
+      <h3 class="friends-section-title">
+        Solicitudes recibidas
+        <span class="badge badge-admin">{{ received|length }}</span>
+      </h3>
+      {% for u in received %}
+      <div class="friend-row" data-id="{{ u.id }}">
+        <div class="friend-avatar"><img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username[0]|upper }}</div>
+        <div class="friend-info">
+          <span class="friend-name">{{ u.username }}</span>
+          <span class="friend-sub">quiere ser tu amigo</span>
+        </div>
+        <div class="friend-actions">
+          <button class="btn btn-sm btn-primary btn-accept" data-fid="{{ u.friendship_id }}">Aceptar</button>
+          <button class="btn btn-sm btn-danger btn-reject"  data-fid="{{ u.friendship_id }}">Rechazar</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if friends %}
+    <div class="friends-section">
+      <h3 class="friends-section-title">Tus amigos</h3>
+      {% for u in friends %}
+      <div class="friend-row">
+        <div class="friend-avatar"><img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username[0]|upper }}</div>
+        <div class="friend-info">
+          <span class="friend-name">{{ u.username }}</span>
+          <span class="friend-sub friend-ok">Amigos</span>
+        </div>
+        <button class="btn btn-sm btn-danger btn-unfriend" data-fid="{{ u.friendship_id }}" data-name="{{ u.username }}">Eliminar</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if sent %}
+    <div class="friends-section">
+      <h3 class="friends-section-title">Solicitudes enviadas</h3>
+      {% for u in sent %}
+      <div class="friend-row">
+        <div class="friend-avatar"><img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username[0]|upper }}</div>
+        <div class="friend-info">
+          <span class="friend-name">{{ u.username }}</span>
+          <span class="friend-sub">Pendiente…</span>
+        </div>
+        <button class="btn btn-sm btn-secondary btn-cancel" data-fid="{{ u.friendship_id }}">Cancelar</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if others %}
+    <div class="friends-section">
+      <h3 class="friends-section-title">Añadir amigos</h3>
+      {% for u in others %}
+      <div class="friend-row" id="user-row-{{ u.id }}">
+        <div class="friend-avatar"><img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username[0]|upper }}</div>
+        <div class="friend-info">
+          <span class="friend-name">{{ u.username }}</span>
+        </div>
+        <button class="btn btn-sm btn-primary btn-add" data-uid="{{ u.id }}">Añadir</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not users %}
+    <div class="empty-state">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      <p>No hay otros usuarios</p>
+      <p class="empty-sub">Cuando otros usuarios se registren aparecerán aquí</p>
+    </div>
+    {% endif %}
+
+    <div id="toast" class="friends-toast" style="display:none"></div>
+
+  </div>
+</div>
+
+<script>
+const CSRF = {{ csrf_token | tojson }};
+
+function api(url, body) {
+  return fetch(url, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({...body, csrf_token: CSRF})
+  }).then(r => r.json());
+}
+
+function toast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'friends-toast ' + (ok ? 'toast-ok' : 'toast-err');
+  t.style.display = '';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+document.querySelectorAll('.btn-add').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const uid = parseInt(btn.dataset.uid);
+    const res = await api('/api/friends/send', {user_id: uid});
+    if (res.success) {
+      const row = document.getElementById('user-row-' + uid);
+      btn.textContent = 'Enviado';
+      btn.disabled = true;
+      btn.classList.replace('btn-primary', 'btn-secondary');
+      toast('Solicitud enviada');
+    } else {
+      toast(res.error || 'Error', false);
+    }
+  });
+});
+
+document.querySelectorAll('.btn-accept').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const fid = parseInt(btn.dataset.fid);
+    const res = await api('/api/friends/accept', {friendship_id: fid});
+    if (res.success) { toast('¡Ahora sois amigos!'); setTimeout(() => location.reload(), 1000); }
+    else toast(res.error || 'Error', false);
+  });
+});
+
+document.querySelectorAll('.btn-reject, .btn-cancel, .btn-unfriend').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (btn.classList.contains('btn-unfriend')) {
+      if (!confirm('¿Eliminar a ' + btn.dataset.name + ' de tus amigos?')) return;
+    }
+    const fid = parseInt(btn.dataset.fid);
+    const res = await api('/api/friends/reject', {friendship_id: fid});
+    if (res.success) { setTimeout(() => location.reload(), 300); }
+    else toast(res.error || 'Error', false);
+  });
+});
+</script>
+<script>
+/* Last-page memory */
+(function() {
+  const path = location.pathname + location.search;
+  const skip = ['/', '/logout', '/register'];
+  if (!skip.includes(location.pathname)) {
+    localStorage.setItem('bh-last-page', path);
+  }
+})();
+</script>
+</body>
+</html>

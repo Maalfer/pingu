@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="/static/favicon.ico">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>Chat — BaluHome</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="subapp-body">
+<div class="subapp-wrapper">
+
+  <header class="subapp-header">
+    <a href="/home" class="subapp-back">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </a>
+    <div class="subapp-title-wrap">
+      <h1 class="subapp-title">Chat</h1>
+    </div>
+    <a href="/profile" class="header-friends-btn" id="friends-btn" title="Amigos">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      <span class="friends-badge" id="friends-badge" style="display:none"></span>
+    </a>
+  </header>
+
+  <div class="subapp-content">
+
+    {% if conversations %}
+    <div class="chat-list" id="chat-list">
+      {% for conv in conversations %}
+      <a href="/chat/{{ conv.user.id }}" class="chat-conv-item {% if conv.unread > 0 %}has-unread{% endif %}">
+        <div class="chat-conv-avatar"><img src="/static/avatars/{{ conv.user.id }}.jpg" onerror="this.remove()" alt="">{{ conv.user.username[0]|upper }}</div>
+        <div class="chat-conv-info">
+          <div class="chat-conv-name">{{ conv.user.username }}</div>
+          {% if conv.last_msg %}
+          <div class="chat-conv-preview">
+            {% if conv.last_msg.direction == 'me' %}Tú: {% endif %}
+            {{ conv.last_msg.content[:50] }}{% if conv.last_msg.content|length > 50 %}...{% endif %}
+          </div>
+          {% else %}
+          <div class="chat-conv-preview">Empieza la conversación</div>
+          {% endif %}
+        </div>
+        <div class="chat-conv-meta">
+          {% if conv.last_msg %}
+          <div class="chat-conv-time">{{ conv.last_msg.created_at[11:16] }}</div>
+          {% endif %}
+          {% if conv.unread > 0 %}
+          <div class="chat-unread-badge">{{ conv.unread }}</div>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+      <p>Sin amigos aún</p>
+      <p class="empty-sub">Añade amigos desde <a href="/profile" style="color:var(--cyan)">Amigos</a> para chatear</p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+<script>
+fetch('/api/friends/pending-count').then(r=>r.json()).then(d=>{
+  if(d.count>0){const b=document.getElementById('friends-badge');if(b){b.textContent=d.count;b.style.display='';}}
+}).catch(()=>{});
+</script>
+<script>
+/* Last-page memory */
+(function() {
+  const path = location.pathname + location.search;
+  const skip = ['/', '/logout', '/register'];
+  if (!skip.includes(location.pathname)) {
+    localStorage.setItem('bh-last-page', path);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<div class="page-admin">
+  <div class="page-header">
+    <h2>Panel de Admin</h2>
+  </div>
+
+  <!-- Stats row -->
+  <div class="admin-stats">
+    <div class="admin-stat-card">
+      <div class="asc-value">{{ users | length }}</div>
+      <div class="asc-label">Usuarios</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="asc-value">{{ all_songs | length }}</div>
+      <div class="asc-label">Canciones</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="asc-value">{{ invites | selectattr('is_used', 'equalto', 0) | list | length }}</div>
+      <div class="asc-label">Invites activos</div>
+    </div>
+  </div>
+
+  <!-- Generate invite -->
+  <div class="admin-section">
+    <div class="admin-section-header">
+      <h3>Invitaciones</h3>
+      <button class="btn btn-primary btn-sm" id="btn-gen-invite">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Generar enlace
+      </button>
+    </div>
+    <div id="invite-result" class="hidden invite-result">
+      <label>Enlace de registro:</label>
+      <div class="invite-link-box">
+        <input type="text" id="invite-link-input" readonly>
+        <button class="btn-copy" id="btn-copy-invite" title="Copiar">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    {% if invites %}
+    <div class="invites-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Token</th><th>Estado</th><th>Creado</th><th>Usado por</th></tr>
+        </thead>
+        <tbody>
+          {% for inv in invites %}
+          <tr class="{{ 'row-used' if inv.is_used else '' }}">
+            <td class="token-cell">{{ inv.token[:12] }}...</td>
+            <td>
+              <span class="badge {{ 'badge-used' if inv.is_used else 'badge-active' }}">
+                {{ 'Usado' if inv.is_used else 'Activo' }}
+              </span>
+            </td>
+            <td>{{ inv.created_at[:16] if inv.created_at else '—' }}</td>
+            <td>{{ inv.used_by_name or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Users -->
+  <div class="admin-section">
+    <h3>Usuarios</h3>
+    <div class="invites-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Usuario</th><th>Rol</th><th>Canciones</th><th>Registrado</th></tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>
+              <div class="user-row">
+                <div class="user-avatar-sm">{{ u.username[0] | upper }}</div>
+                {{ u.username }}
+              </div>
+            </td>
+            <td>
+              <span class="badge {{ 'badge-admin' if u.role == 'admin' else 'badge-user' }}">
+                {{ u.role }}
+              </span>
+            </td>
+            <td>{{ u.song_count }}</td>
+            <td>{{ u.created_at[:10] if u.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- All songs -->
+  <div class="admin-section">
+    <h3>Todas las canciones</h3>
+    {% if not all_songs %}
+    <p class="text-muted">Aún no hay canciones.</p>
+    {% else %}
+    <ul class="song-list" id="song-list">
+      {% for song in all_songs %}
+      <li class="song-item" data-song-id="{{ song.id }}" data-index="{{ loop.index0 }}">
+        <div class="song-thumb-wrap">
+          {% if song.thumbnail %}
+          <img src="{{ song.thumbnail }}" alt="" class="song-thumb" loading="lazy">
+          {% else %}
+          <div class="song-thumb-placeholder">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+          </div>
+          {% endif %}
+          <div class="song-play-overlay">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+        <div class="song-info">
+          <div class="song-title">{{ song.title }}</div>
+          <div class="song-artist">{{ song.artist }} · <small>{{ song.added_by }}</small></div>
+        </div>
+        <div class="song-meta">
+          {% if song.duration and song.duration > 0 %}
+          <span class="song-duration">{{ song.duration | format_duration }}</span>
+          {% endif %}
+          <button class="song-menu-btn" data-song-id="{{ song.id }}" title="Opciones">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          </button>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <!-- Context menu for admin songs -->
+    <div id="song-context-menu" class="context-menu hidden">
+      <button class="ctx-item ctx-play" id="ctx-play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Reproducir
+      </button>
+      <button class="ctx-item ctx-delete" id="ctx-delete">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+        Eliminar canción
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+window._librarySongs = {{ songs_json | safe }};
+</script>
