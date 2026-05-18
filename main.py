@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Request, Depends, HTTPException, Form, UploadFile, File
+from fastapi import FastAPI, Request, HTTPException, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -75,7 +75,7 @@ def get_session(request: Request):
     return request.session
 
 
-def get_admin_session(session=Depends(get_session)):
+def get_admin_session(session):
     if session.get("user_role") != "admin":
         raise HTTPException(status_code=403, detail="Admin required")
     return session
@@ -939,78 +939,6 @@ async def gastos_detail_page(request: Request, friend_id: int):
          "balance": balance, "csrf_token": csrf, "user_id": user_id}
     )
 
-
-@app.post("/api/gastos/add-friend")
-async def api_gastos_add_friend(request: Request):
-    session = get_session(request)
-    data = await request.json()
-    if not ensure_csrf(session, data.get("csrf_token", "")):
-        return JSONResponse({"error": "Token inválido"}, status_code=403)
-    username = (data.get("username") or "").strip()
-    if not username:
-        return JSONResponse({"error": "Introduce un nombre de usuario"})
-    user_id = session["user_id"]
-    conn = get_db()
-    target = row_to_dict(conn.execute(
-        "SELECT id, username FROM users WHERE username = ? COLLATE NOCASE", (username,)
-    ).fetchone())
-    if not target:
-        conn.close()
-        return JSONResponse({"error": "Usuario no encontrado"})
-    if target["id"] == user_id:
-        conn.close()
-        return JSONResponse({"error": "No puedes añadirte a ti mismo"})
-    existing = row_to_dict(conn.execute(
-        """SELECT * FROM friendships
-           WHERE (requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)""",
-        (user_id, target["id"], target["id"], user_id)
-    ).fetchone())
-    if existing:
-        conn.close()
-        if existing["status"] == "accepted":
-            return JSONResponse({"error": "Ya sois amigos"})
-        return JSONResponse({"error": "Ya existe una solicitud pendiente"})
-    conn.execute("INSERT INTO friendships (requester_id, addressee_id) VALUES (?, ?)",
-                 (user_id, target["id"]))
-    conn.commit()
-    conn.close()
-    return JSONResponse({"success": True, "username": target["username"]})
-
-
-@app.post("/api/gastos/accept-friend")
-async def api_gastos_accept_friend(request: Request):
-    session = get_session(request)
-    data = await request.json()
-    if not ensure_csrf(session, data.get("csrf_token", "")):
-        return JSONResponse({"error": "Token inválido"}, status_code=403)
-    friendship_id = int(data.get("friendship_id") or 0)
-    user_id = session["user_id"]
-    conn = get_db()
-    conn.execute(
-        "UPDATE friendships SET status = 'accepted' WHERE id = ? AND addressee_id = ? AND status = 'pending'",
-        (friendship_id, user_id)
-    )
-    conn.commit()
-    conn.close()
-    return JSONResponse({"success": True})
-
-
-@app.post("/api/gastos/reject-friend")
-async def api_gastos_reject_friend(request: Request):
-    session = get_session(request)
-    data = await request.json()
-    if not ensure_csrf(session, data.get("csrf_token", "")):
-        return JSONResponse({"error": "Token inválido"}, status_code=403)
-    friendship_id = int(data.get("friendship_id") or 0)
-    user_id = session["user_id"]
-    conn = get_db()
-    conn.execute(
-        "DELETE FROM friendships WHERE id = ? AND (addressee_id = ? OR requester_id = ?)",
-        (friendship_id, user_id, user_id)
-    )
-    conn.commit()
-    conn.close()
-    return JSONResponse({"success": True})
 
 
 @app.post("/api/gastos/add-transaction")
