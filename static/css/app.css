@@ -1412,7 +1412,8 @@ img { display: block; max-width: 100%; }
 
 @media (max-width: 400px) { .home-username { display: none; } }
 
-.home-logout {
+.home-logout,
+.home-refresh {
   color: var(--text3);
   transition: color .15s;
   width: 30px;
@@ -1421,9 +1422,14 @@ img { display: block; max-width: 100%; }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
-.home-logout svg { width: 18px; height: 18px; }
-.home-logout:hover { color: var(--text2); }
+.home-logout svg, .home-refresh svg { width: 18px; height: 18px; }
+.home-logout:hover, .home-refresh:hover { color: var(--text2); }
+.home-refresh:active svg { transform: rotate(360deg); transition: transform .5s ease; }
 
 .home-greeting {
   margin-bottom: 2rem;
