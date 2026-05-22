@@ -49,14 +49,8 @@ const Router = {
   },
 
   afterLoad(page) {
-    if (page === 'library' || page === 'admin') {
+    if (page === 'library') {
       Library.init();
-    }
-    if (page === 'dashboard') {
-      Dashboard.init();
-    }
-    if (page === 'admin') {
-      Admin.init();
     }
     // Restore playing state highlight
     Player.highlightCurrent();
@@ -497,121 +491,6 @@ const Modal = {
       this.setStatus('error', 'Error de conexión. Comprueba el servidor.');
     } finally {
       btn.disabled = false;
-    }
-  }
-};
-
-// =============================================
-// DASHBOARD
-// =============================================
-const Dashboard = {
-  init() {
-    const formUser = document.getElementById('form-change-username');
-    const formPass = document.getElementById('form-change-password');
-
-    if (formUser) {
-      formUser.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await this.submitForm(formUser, '/api/update_user', 'msg-username');
-      });
-    }
-
-    if (formPass) {
-      formPass.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await this.submitForm(formPass, '/api/update_user', 'msg-password');
-      });
-    }
-  },
-
-  async submitForm(form, endpoint, msgId) {
-    const formData = Object.fromEntries(new FormData(form));
-    const msgEl = document.getElementById(msgId);
-    const btn = form.querySelector('button[type=submit]');
-
-    btn.disabled = true;
-    msgEl.className = 'form-msg';
-    msgEl.textContent = '';
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, csrf_token: APP.csrf })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        msgEl.className = 'form-msg show ok';
-        msgEl.textContent = '¡Actualizado correctamente!';
-        if (data.new_username) {
-          APP.username = data.new_username;
-          // Update sidebar
-          document.querySelectorAll('.sidebar-user span').forEach(el => el.textContent = data.new_username);
-          document.querySelectorAll('.sidebar-user-avatar, .profile-avatar').forEach(el => {
-            el.textContent = data.new_username[0].toUpperCase();
-          });
-        }
-        form.reset();
-      } else {
-        msgEl.className = 'form-msg show err';
-        msgEl.textContent = data.error || 'Error al actualizar.';
-      }
-    } catch(e) {
-      msgEl.className = 'form-msg show err';
-      msgEl.textContent = 'Error de conexión.';
-    } finally {
-      btn.disabled = false;
-    }
-  }
-};
-
-// =============================================
-// ADMIN
-// =============================================
-const Admin = {
-  init() {
-    const genBtn = document.getElementById('btn-gen-invite');
-    if (!genBtn) return;
-
-    genBtn.addEventListener('click', async () => {
-      genBtn.disabled = true;
-      try {
-        const res = await fetch('/api/invite', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ csrf_token: APP.csrf })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          const result = document.getElementById('invite-result');
-          const input  = document.getElementById('invite-link-input');
-          result.classList.remove('hidden');
-          input.value = data.link;
-        } else {
-          alert(data.error || 'Error generando invite');
-        }
-      } catch(e) {
-        alert('Error de conexión');
-      } finally {
-        genBtn.disabled = false;
-      }
-    });
-
-    const copyBtn = document.getElementById('btn-copy-invite');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
-        const input = document.getElementById('invite-link-input');
-        try {
-          await navigator.clipboard.writeText(input.value);
-          copyBtn.style.background = '#17a041';
-          setTimeout(() => copyBtn.style.background = '', 1500);
-        } catch(e) {
-          input.select();
-          document.execCommand('copy');
-        }
-      });
     }
   }
 };

@@ -5,12 +5,23 @@ __pycache__/
 venv/
 .env
 
-# Database (do not commit the live DB)
+# ═════ DATOS DE USUARIO — NUNCA subir al repositorio ═════
+# Bóveda de Obsidian (notas .md + imágenes/adjuntos): vive bajo data/vault/.
+# Se ignora todo data/ y, de forma explícita y redundante, la bóveda y sus
+# adjuntos, para que sigan protegidos aunque se modifique la regla de arriba.
 data/
+data/vault/
+data/vault/**
+**/.obsidian/
+**/.trash/
+
+# Bases de datos
 baluhome.db
 *.db
+*.sqlite
+*.sqlite3
 
-# User uploads (binary data)
+# Subidas de usuarios (datos binarios) y temporales de subida
 uploads/
 
 # Static avatars (generated at runtime)
@@ -18,6 +29,14 @@ static/avatars/
 
 # Nginx / system
 .htaccess
+
+# Copias de seguridad locales / archivos temporales (no subir)
+_*-backup-*/
+*.bak
+*.bak.*
+*-bak.*
+*.orig
+main_refactored.py
 
 # OS
 .DS_Store

@@ -1,0 +1,372 @@
+{% extends "_base.html" %}
+{% block title %}Archivos — BaluHome{% endblock %}
+
+{% block header_title %}Archivos{% endblock %}
+{% block header_actions %}
+<button class="btn btn-sm btn-primary" id="btn-new">+ Nuevo</button>
+{% endblock %}
+
+{% block content %}
+<div class="subapp-content">
+  <nav class="files-breadcrumbs" id="breadcrumbs"></nav>
+  <div class="files-grid" id="files-grid"></div>
+  <div class="files-empty" id="files-empty" style="display:none">
+    <svg width="24" height="24" class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+    <p>Esta carpeta está vacía</p>
+    <p class="empty-sub">Pulsa <strong>+ Nuevo</strong> para crear una carpeta o subir un archivo</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block body_end %}
+<div id="modal-new" class="modal hidden">
+  <div class="modal-backdrop" data-close-new></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Nuevo</h2>
+      <button class="modal-close" data-close-new>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <button class="files-new-option" id="opt-folder">
+        <div class="files-new-icon" style="background:rgba(245,158,11,.18);color:#f59e0b">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        </div>
+        <div class="files-new-info">
+          <div class="files-new-title">Nueva carpeta</div>
+          <div class="files-new-sub">Organiza tus archivos</div>
+        </div>
+      </button>
+      <button class="files-new-option" id="opt-upload">
+        <div class="files-new-icon" style="background:rgba(6,182,212,.18);color:var(--cyan)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+        </div>
+        <div class="files-new-info">
+          <div class="files-new-title">Subir archivo</div>
+          <div class="files-new-sub">Documentos, imágenes, vídeos…</div>
+        </div>
+      </button>
+      <input type="file" id="file-input" hidden>
+    </div>
+  </div>
+</div>
+
+<div id="modal-name" class="modal hidden">
+  <div class="modal-backdrop" data-close-name></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="name-title">Nueva carpeta</h2>
+      <button class="modal-close" data-close-name>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="name-input" placeholder="Mi carpeta" maxlength="200" autocomplete="off">
+      </div>
+      <div id="name-err" class="alert alert-error" style="display:none"></div>
+      <button class="btn btn-primary btn-full" id="btn-name-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-color" class="modal hidden">
+  <div class="modal-backdrop" data-close-color></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Color de la carpeta</h2>
+      <button class="modal-close" data-close-color>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="files-color-grid" id="color-grid">
+        <button class="files-color-btn" data-color="" title="Por defecto"><span style="background:linear-gradient(135deg,#9ca3af,#4b5563)"></span></button>
+        <button class="files-color-btn" data-color="#06b6d4"><span style="background:#06b6d4"></span></button>
+        <button class="files-color-btn" data-color="#22c55e"><span style="background:#22c55e"></span></button>
+        <button class="files-color-btn" data-color="#eab308"><span style="background:#eab308"></span></button>
+        <button class="files-color-btn" data-color="#f97316"><span style="background:#f97316"></span></button>
+        <button class="files-color-btn" data-color="#ef4444"><span style="background:#ef4444"></span></button>
+        <button class="files-color-btn" data-color="#a855f7"><span style="background:#a855f7"></span></button>
+        <button class="files-color-btn" data-color="#ec4899"><span style="background:#ec4899"></span></button>
+        <button class="files-color-btn" data-color="#3b82f6"><span style="background:#3b82f6"></span></button>
+        <button class="files-color-btn" data-color="#6b7280"><span style="background:#6b7280"></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ctx-menu" class="ctx-menu hidden">
+  <button class="ctx-item" data-action="open">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    <span id="ctx-open-label">Abrir</span>
+  </button>
+  <button class="ctx-item" data-action="download">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+    <span>Descargar</span>
+  </button>
+  <button class="ctx-item" data-action="rename">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+    <span>Renombrar</span>
+  </button>
+  <button class="ctx-item" data-action="color">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.49 22 2 17.51 2 12S6.04 2 12 2c5.96 0 10 4.04 10 9 0 3.31-2.69 6-6 6h-1.77c-.28 0-.5.22-.5.5 0 .12.05.23.13.33.41.47.64 1.06.64 1.67A2.5 2.5 0 0112 22z"/></svg>
+    <span>Cambiar color</span>
+  </button>
+  <div class="ctx-sep"></div>
+  <button class="ctx-item ctx-danger" data-action="delete">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+    <span>Eliminar</span>
+  </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = {{ csrf_token | tojson }};
+let currentParent = null;
+let currentItems = [];
+let currentBreadcrumbs = [];
+let ctxItem = null;
+let nameMode = null;
+let colorTarget = null;
+
+function esc(t) {
+  return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtSize(bytes) {
+  if (!bytes) return '';
+  const u = ['B','KB','MB','GB'];
+  let i = 0, n = bytes;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+}
+function iconForMime(mime, name) {
+  const m = (mime || '').toLowerCase();
+  const ext = (name || '').split('.').pop().toLowerCase();
+  if (m.startsWith('image/')) return {color:'#22c55e', path:'M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z'};
+  if (m.startsWith('video/')) return {color:'#ef4444', path:'M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z'};
+  if (m.startsWith('audio/')) return {color:'#a855f7', path:'M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z'};
+  if (m === 'application/pdf' || ext === 'pdf') return {color:'#ef4444', path:'M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'};
+  if (['doc','docx','odt','rtf'].includes(ext)) return {color:'#3b82f6', path:'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z'};
+  if (['xls','xlsx','ods','csv'].includes(ext)) return {color:'#22c55e', path:'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z'};
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return {color:'#eab308', path:'M14 17h-4v-2h4v2zm0-4h-4v-2h4v2zm0-4h-4V7h4v2zm0-4h-4V3h4v2z'};
+  return {color:'#6b7280', path:'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z'};
+}
+function api(url, body) {
+  return fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, csrf_token: CSRF })
+  }).then(r => r.json());
+}
+
+async function loadFolder(id) {
+  currentParent = id || null;
+  try {
+    const r = await fetch('/api/files/list?parent_id=' + (id || 0), { credentials: 'same-origin' });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error || 'Error');
+    currentItems = data.items;
+    currentBreadcrumbs = data.ancestors.concat(data.parent ? [{ id: data.parent.id, name: data.parent.name }] : []);
+    render();
+  } catch (e) {
+    document.getElementById('files-grid').innerHTML = `<div class="alert alert-error">${esc(e.message)}</div>`;
+  }
+}
+
+function render() {
+  const bc = document.getElementById('breadcrumbs');
+  let html = `<button class="files-bc-item" data-id="0"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Mis archivos</button>`;
+  currentBreadcrumbs.forEach(b => {
+    html += `<span class="files-bc-sep">/</span><button class="files-bc-item" data-id="${b.id}">${esc(b.name)}</button>`;
+  });
+  bc.innerHTML = html;
+  bc.querySelectorAll('.files-bc-item').forEach(btn => {
+    btn.addEventListener('click', () => loadFolder(parseInt(btn.dataset.id) || null));
+  });
+
+  const grid = document.getElementById('files-grid');
+  const empty = document.getElementById('files-empty');
+  if (currentItems.length === 0) { grid.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = currentItems.map(it => {
+    if (it.is_folder) {
+      const color = it.color || '#f59e0b';
+      return `<div class="files-card" data-id="${it.id}" data-folder="1">
+        <div class="files-card-icon" style="color:${color}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
+        <div class="files-card-name">${esc(it.name)}</div>
+        <div class="files-card-meta">Carpeta</div>
+      </div>`;
+    }
+    const ic = iconForMime(it.mime_type, it.name);
+    return `<div class="files-card" data-id="${it.id}" data-folder="0">
+      <div class="files-card-icon" style="color:${ic.color}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="${ic.path}"/></svg></div>
+      <div class="files-card-name">${esc(it.name)}</div>
+      <div class="files-card-meta">${fmtSize(it.size)}</div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.files-card').forEach(card => attachCardHandlers(card));
+}
+
+function attachCardHandlers(card) {
+  const id = parseInt(card.dataset.id);
+  const isFolder = card.dataset.folder === '1';
+  const item = currentItems.find(x => x.id === id);
+  let pressTimer = null, longFired = false, startX = 0, startY = 0;
+  card.addEventListener('contextmenu', e => { e.preventDefault(); openCtxMenu(item, e.clientX, e.clientY); });
+  card.addEventListener('touchstart', e => {
+    longFired = false; const t = e.touches[0]; startX = t.clientX; startY = t.clientY;
+    pressTimer = setTimeout(() => {
+      longFired = true;
+      if (navigator.vibrate) try { navigator.vibrate(40); } catch(_) {}
+      openCtxMenu(item, t.clientX, t.clientY);
+    }, 500);
+  }, { passive: true });
+  card.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - startX, t.clientY - startY) > 10) { clearTimeout(pressTimer); pressTimer = null; }
+  }, { passive: true });
+  card.addEventListener('touchend', () => { clearTimeout(pressTimer); pressTimer = null; });
+  card.addEventListener('touchcancel', () => { clearTimeout(pressTimer); pressTimer = null; });
+  card.addEventListener('click', e => {
+    if (longFired) { e.preventDefault(); return; }
+    if (isFolder) loadFolder(id);
+    else window.location.href = '/api/files/download/' + id;
+  });
+}
+
+function openCtxMenu(item, x, y) {
+  if (!item) return;
+  ctxItem = item;
+  const menu = document.getElementById('ctx-menu');
+  menu.querySelector('[data-action="download"]').style.display = item.is_folder ? 'none' : '';
+  menu.querySelector('[data-action="color"]').style.display    = item.is_folder ? '' : 'none';
+  menu.querySelector('#ctx-open-label').textContent = item.is_folder ? 'Abrir carpeta' : 'Descargar';
+  menu.classList.remove('hidden');
+  const rect = menu.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const w = rect.width || 200, h = rect.height || 240;
+  let px = x, py = y;
+  if (px + w + 8 > vw) px = vw - w - 8;
+  if (py + h + 8 > vh) py = vh - h - 8;
+  menu.style.left = Math.max(8, px) + 'px';
+  menu.style.top  = Math.max(8, py) + 'px';
+}
+function closeCtxMenu() { document.getElementById('ctx-menu').classList.add('hidden'); }
+document.addEventListener('click', e => {
+  const menu = document.getElementById('ctx-menu');
+  if (menu.classList.contains('hidden')) return;
+  if (!menu.contains(e.target)) closeCtxMenu();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
+
+document.getElementById('ctx-menu').addEventListener('click', async e => {
+  const btn = e.target.closest('.ctx-item');
+  if (!btn || !ctxItem) return;
+  const action = btn.dataset.action;
+  closeCtxMenu();
+  if (action === 'open') {
+    if (ctxItem.is_folder) loadFolder(ctxItem.id);
+    else window.location.href = '/api/files/download/' + ctxItem.id;
+  } else if (action === 'download') window.location.href = '/api/files/download/' + ctxItem.id;
+  else if (action === 'rename') openName('rename', ctxItem);
+  else if (action === 'color') openColor(ctxItem);
+  else if (action === 'delete') {
+    if (!confirm(ctxItem.is_folder
+        ? '¿Eliminar la carpeta «' + ctxItem.name + '» y todo su contenido?'
+        : '¿Eliminar el archivo «' + ctxItem.name + '»?')) return;
+    const res = await api('/api/files/delete', { id: ctxItem.id });
+    if (res.success) loadFolder(currentParent);
+    else alert(res.error || 'Error');
+  }
+});
+
+document.getElementById('btn-new').addEventListener('click', () => {
+  document.getElementById('modal-new').classList.remove('hidden');
+});
+document.querySelectorAll('[data-close-new]').forEach(el => el.addEventListener('click', () => {
+  document.getElementById('modal-new').classList.add('hidden');
+}));
+document.getElementById('opt-folder').addEventListener('click', () => {
+  document.getElementById('modal-new').classList.add('hidden');
+  openName('create');
+});
+document.getElementById('opt-upload').addEventListener('click', () => document.getElementById('file-input').click());
+document.getElementById('file-input').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  document.getElementById('modal-new').classList.add('hidden');
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('parent_id', String(currentParent || 0));
+  fd.append('csrf_token', CSRF);
+  const btn = document.getElementById('btn-new');
+  const prev = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+  try {
+    const r = await fetch('/api/files/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error || 'Error subiendo');
+    loadFolder(currentParent);
+  } catch (err) { alert(err.message); }
+  finally { btn.disabled = false; btn.textContent = prev; }
+});
+
+function openName(mode, item) {
+  nameMode = { mode, item: item || null };
+  document.getElementById('name-title').textContent = mode === 'rename' ? 'Renombrar' : 'Nueva carpeta';
+  const inp = document.getElementById('name-input');
+  inp.value = mode === 'rename' && item ? item.name : '';
+  document.getElementById('name-err').style.display = 'none';
+  document.getElementById('modal-name').classList.remove('hidden');
+  setTimeout(() => inp.focus(), 50);
+}
+document.querySelectorAll('[data-close-name]').forEach(el => el.addEventListener('click', () => {
+  document.getElementById('modal-name').classList.add('hidden');
+  nameMode = null;
+}));
+document.getElementById('btn-name-save').addEventListener('click', async () => {
+  if (!nameMode) return;
+  const name = document.getElementById('name-input').value.trim();
+  const err = document.getElementById('name-err');
+  if (!name) { err.textContent = 'Escribe un nombre'; err.style.display = ''; return; }
+  const res = nameMode.mode === 'create'
+    ? await api('/api/files/create-folder', { name, parent_id: currentParent || 0 })
+    : await api('/api/files/rename', { id: nameMode.item.id, name });
+  if (res.success) {
+    document.getElementById('modal-name').classList.add('hidden');
+    nameMode = null;
+    loadFolder(currentParent);
+  } else { err.textContent = res.error || 'Error'; err.style.display = ''; }
+});
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-name-save').click();
+});
+
+function openColor(item) {
+  colorTarget = item;
+  document.getElementById('modal-color').classList.remove('hidden');
+}
+document.querySelectorAll('[data-close-color]').forEach(el => el.addEventListener('click', () => {
+  document.getElementById('modal-color').classList.add('hidden'); colorTarget = null;
+}));
+document.getElementById('color-grid').addEventListener('click', async e => {
+  const btn = e.target.closest('.files-color-btn');
+  if (!btn || !colorTarget) return;
+  const color = btn.dataset.color || '';
+  const res = await api('/api/files/set-color', { id: colorTarget.id, color });
+  document.getElementById('modal-color').classList.add('hidden'); colorTarget = null;
+  if (res.success) loadFolder(currentParent);
+  else alert(res.error || 'Error');
+});
+
+function closeAllModals() {
+  ['modal-new','modal-name','modal-color'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  closeCtxMenu();
+}
+
+loadFolder(null);
+</script>
+{% endblock %}

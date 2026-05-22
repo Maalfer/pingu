@@ -10,12 +10,13 @@
 <title>Registro — BaluHome</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/css/app.css">
+<script>(function(){var m=document.cookie.match(/(?:^|; )bh_theme=([^;]+)/);document.documentElement.dataset.theme=(m&&m[1])||"dark";})();</script>
+<link rel="stylesheet" href="/static/css/app.css?v={{ ASSET_VERSION }}">
 </head>
 <body class="auth-body">
 <div class="auth-container">
   <div class="auth-logo">
-    <svg class="logo-svg" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="24" height="24" class="logo-svg" viewBox="0 0 24 24" fill="currentColor">
       <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
     </svg>
     <h1>BaluHome</h1>
@@ -41,7 +42,7 @@
       <div class="form-group">
         <label for="username">Usuario</label>
         <input type="text" id="username" name="username"
-               value="{{ username_val or \'\' }}"
+               value="{{ username_val or '' }}"
                placeholder="Elige un nombre de usuario" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
       </div>
       <div class="form-group">

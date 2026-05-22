@@ -1,153 +1,104 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-<link rel="shortcut icon" href="/static/favicon.ico">
+{% extends "_base.html" %}
+{% block title %}Música — BaluHome{% endblock %}
 
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<meta name="theme-color" content="#121212">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
-<title>Música — BaluHome</title>
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/css/app.css">
-</head>
-<body>
+{% block header_title %}Música{% endblock %}
 
-<!-- App Shell -->
-<div id="app">
+{% block extra_head %}
+<style>
+/* Music app: dedicated layout overrides since we no longer use the legacy sidebar/bnav */
+body.music-app { background: var(--bg); color: var(--text); }
+#main-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--player-h) + 1.25rem + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(180deg, #1a1a2e 0%, var(--bg) 320px);
+}
+.music-app .player-bar {
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0);
+  padding: 0 .75rem;
+}
+@media (min-width: 768px) {
+  .music-app .player-bar { padding: 0 1.5rem; }
+}
+:root[data-theme="light"] .music-app #main-content { background: linear-gradient(180deg, #e8efff 0%, var(--bg) 320px); }
+:root[data-theme="dracula"] .music-app #main-content { background: linear-gradient(180deg, #2f2b46 0%, var(--bg) 320px); }
+:root[data-theme="pink"] .music-app #main-content { background: linear-gradient(180deg, #ffd9e8 0%, var(--bg) 320px); }
+</style>
+{% endblock %}
 
-  <!-- Sidebar (desktop) -->
-  <aside id="sidebar">
-    <div class="sidebar-logo">
-      <svg viewBox="0 0 24 24" fill="currentColor" class="sidebar-logo-icon">
-        <path d="M12 3C9.5 3 7.5 5 6.5 7C5 8.5 3.5 12 3.5 16C3.5 18.5 5 20.5 6.5 20C7.5 19.5 8 17 8.5 14.5C9.5 14 10.7 14 12 14C13.3 14 14.5 14 15.5 14.5C16 17 16.5 19.5 17.5 20C19 20.5 20.5 18.5 20.5 16C20.5 12 19 8.5 17.5 7C16.5 5 14.5 3 12 3Z"/>
-      </svg>
-      <span>Balusong</span>
-    </div>
-    <nav class="sidebar-nav">
-      <a href="/home" class="sidebar-home-link">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        BaluHome
-      </a>
-      <a href="#" class="nav-item active" data-page="library">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
-        Mi Biblioteca
-      </a>
-      <a href="#" class="nav-item" data-page="dashboard">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        Perfil
-      </a>
-      {% if user_role == 'admin' %}
-      <a href="#" class="nav-item" data-page="admin">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-        Admin
-      </a>
-      {% endif %}
-    </nav>
-    <div class="sidebar-user">
-      <div class="sidebar-user-avatar">{{ username[0]|upper }}</div>
-      <span>{{ username }}</span>
-      <a href="/logout" class="sidebar-logout" title="Cerrar sesión">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
-      </a>
-    </div>
-  </aside>
+{% block body_class %}subapp-body music-app{% endblock %}
+{% block wrapper_class %}subapp-wrapper{% endblock %}
 
-  <!-- Main content -->
-  <main id="main-content">
-    <div id="content-area">
-      <!-- Content loaded here by JS -->
-      <div class="loading-spinner"><div class="spinner"></div></div>
-    </div>
-  </main>
+{% block content %}
+<main id="main-content">
+  <div id="content-area">
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  </div>
+</main>
+{% endblock %}
 
-  <!-- Bottom navigation (mobile) -->
-  <nav id="bottom-nav">
-    <a href="/home" class="bnav-item">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-      <span>Inicio</span>
-    </a>
-    <a href="#" class="bnav-item active" data-page="library">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
-      <span>Biblioteca</span>
-    </a>
-    <a href="#" class="bnav-item" data-page="dashboard">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      <span>Perfil</span>
-    </a>
-    {% if user_role == 'admin' %}
-    <a href="#" class="bnav-item" data-page="admin">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-      <span>Admin</span>
-    </a>
-    {% endif %}
-  </nav>
-
-  <!-- Persistent Audio Player -->
-  <div id="player-bar" class="player-bar hidden">
-    <div class="player-track" id="player-expand-btn">
-      <img id="player-thumb" src="" alt="" class="player-thumb">
-      <div class="player-info">
-        <div id="player-title" class="player-title">Sin reproducción</div>
-        <div id="player-artist" class="player-artist"></div>
-      </div>
-    </div>
-    <div class="player-controls-mini">
-      <button class="player-btn" id="btn-prev" title="Anterior">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-      </button>
-      <button class="player-btn player-btn-play" id="btn-play-pause" title="Play/Pause">
-        <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-      </button>
-      <button class="player-btn" id="btn-next" title="Siguiente">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
-      </button>
+{% block body_end %}
+<!-- Persistent Audio Player -->
+<div id="player-bar" class="player-bar hidden">
+  <div class="player-track" id="player-expand-btn">
+    <img id="player-thumb" src="" alt="" class="player-thumb">
+    <div class="player-info">
+      <div id="player-title" class="player-title">Sin reproducción</div>
+      <div id="player-artist" class="player-artist"></div>
     </div>
   </div>
+  <div class="player-controls-mini">
+    <button class="player-btn" id="btn-prev" title="Anterior">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="player-btn player-btn-play" id="btn-play-pause" title="Play/Pause">
+      <svg width="24" height="24" id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg width="24" height="24" id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="player-btn" id="btn-next" title="Siguiente">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
+    </button>
+  </div>
+</div>
 
-  <!-- Full Screen Player -->
-  <div id="player-fullscreen" class="player-fullscreen hidden">
-    <div class="pf-header">
-      <button class="pf-back" id="pf-close">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-      </button>
-      <div class="pf-header-info">
-        <span>Reproduciendo ahora</span>
-      </div>
-    </div>
-    <div class="pf-artwork">
-      <img id="pf-thumb" src="" alt="">
-    </div>
-    <div class="pf-song-info">
-      <div id="pf-title" class="pf-title">Sin reproducción</div>
-      <div id="pf-artist" class="pf-artist"></div>
-    </div>
-    <div class="pf-progress">
-      <input type="range" id="pf-seek" class="seek-bar" min="0" max="100" value="0" step="0.1">
-      <div class="pf-times">
-        <span id="pf-current">0:00</span>
-        <span id="pf-duration">0:00</span>
-      </div>
-    </div>
-    <div class="pf-controls">
-      <button class="pf-btn" id="pf-prev">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-      </button>
-      <button class="pf-btn pf-btn-play" id="pf-play-pause">
-        <svg id="pf-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="pf-icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-      </button>
-      <button class="pf-btn" id="pf-next">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
-      </button>
+<!-- Full Screen Player -->
+<div id="player-fullscreen" class="player-fullscreen hidden">
+  <div class="pf-header">
+    <button class="pf-back" id="pf-close">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    <div class="pf-header-info">
+      <span>Reproduciendo ahora</span>
     </div>
   </div>
-
+  <div class="pf-artwork">
+    <img id="pf-thumb" src="" alt="">
+  </div>
+  <div class="pf-song-info">
+    <div id="pf-title" class="pf-title">Sin reproducción</div>
+    <div id="pf-artist" class="pf-artist"></div>
+  </div>
+  <div class="pf-progress">
+    <input type="range" id="pf-seek" class="seek-bar" min="0" max="100" value="0" step="0.1">
+    <div class="pf-times">
+      <span id="pf-current">0:00</span>
+      <span id="pf-duration">0:00</span>
+    </div>
+  </div>
+  <div class="pf-controls">
+    <button class="pf-btn" id="pf-prev">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="pf-btn pf-btn-play" id="pf-play-pause">
+      <svg width="24" height="24" id="pf-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg width="24" height="24" id="pf-icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="pf-btn" id="pf-next">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
+    </button>
+  </div>
 </div>
 
 <!-- Add Song Modal -->
@@ -157,7 +108,7 @@
     <div class="modal-header">
       <h2>Añadir canción</h2>
       <button class="modal-close" id="modal-close-btn">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
       </button>
     </div>
     <div class="modal-body">
@@ -168,7 +119,7 @@
           <input type="url" id="yt-url" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
         </div>
         <button class="btn btn-primary btn-full" id="btn-add-song">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
           Añadir canción
         </button>
         <div id="add-song-status" class="hidden"></div>
@@ -177,9 +128,10 @@
   </div>
 </div>
 
-<!-- Hidden audio element -->
 <audio id="audio-player" preload="metadata"></audio>
+{% endblock %}
 
+{% block scripts %}
 <script>
 window.APP = {
   csrf: {{ csrf_token | tojson }},
@@ -189,15 +141,4 @@ window.APP = {
 };
 </script>
 <script src="/static/js/app.js"></script>
-<script>
-/* Last-page memory */
-(function() {
-  const path = location.pathname + location.search;
-  const skip = ['/', '/logout', '/register'];
-  if (!skip.includes(location.pathname)) {
-    localStorage.setItem('bh-last-page', path);
-  }
-})();
-</script>
-</body>
-</html>
+{% endblock %}

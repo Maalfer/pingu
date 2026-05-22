@@ -1,80 +1,35 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-<link rel="shortcut icon" href="/static/favicon.ico">
+{% extends "_base.html" %}
+{% block title %}Mis Gastos — BaluHome{% endblock %}
 
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<meta name="theme-color" content="#0a0a0f">
-<title>Mis Gastos — BaluHome</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="stylesheet" href="/static/css/app.css">
-</head>
-<body class="subapp-body">
-<div class="subapp-wrapper">
+{% block header_title %}Mis Gastos{% endblock %}
 
-  <header class="subapp-header">
-    <a href="/home" class="subapp-back">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+{% block content %}
+<div class="subapp-content">
+  {% if friends %}
+  <div class="friends-list" id="friends-list">
+    {% for f in friends %}
+    <a href="/gastos/{{ f.friend_id }}" class="friend-item">
+      <div class="friend-avatar"><img src="/static/avatars/{{ f.friend_id }}.jpg" onerror="this.remove()" alt="">{{ f.friend_name[0]|upper }}</div>
+      <div class="friend-info">
+        <span class="friend-name">{{ f.friend_name }}</span>
+        {% if f.balance > 0 %}
+        <span class="friend-balance balance-pos">Te debe {{ '%.2f'|format(f.balance) }}€</span>
+        {% elif f.balance < 0 %}
+        <span class="friend-balance balance-neg">Le debes {{ '%.2f'|format(f.balance|abs) }}€</span>
+        {% else %}
+        <span class="friend-balance balance-zero">Estáis en paz</span>
+        {% endif %}
+      </div>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="friend-arrow"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
     </a>
-    <div class="subapp-title-wrap">
-      <h1 class="subapp-title">Mis Gastos</h1>
-    </div>
-    <a href="/profile" class="header-friends-btn" id="friends-btn" title="Amigos">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      <span class="friends-badge" id="friends-badge" style="display:none"></span>
-    </a>
-  </header>
-
-  <div class="subapp-content">
-
-    {% if friends %}
-    <div class="friends-list" id="friends-list">
-      {% for f in friends %}
-      <a href="/gastos/{{ f.friend_id }}" class="friend-item">
-        <div class="friend-avatar"><img src="/static/avatars/{{ f.friend_id }}.jpg" onerror="this.remove()" alt="">{{ f.friend_name[0]|upper }}</div>
-        <div class="friend-info">
-          <span class="friend-name">{{ f.friend_name }}</span>
-          {% if f.balance > 0 %}
-          <span class="friend-balance balance-pos">Te debe {{ '%.2f'|format(f.balance) }}€</span>
-          {% elif f.balance < 0 %}
-          <span class="friend-balance balance-neg">Le debes {{ '%.2f'|format(f.balance|abs) }}€</span>
-          {% else %}
-          <span class="friend-balance balance-zero">Estáis en paz</span>
-          {% endif %}
-        </div>
-        <svg viewBox="0 0 24 24" fill="currentColor" class="friend-arrow"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-      <svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      <p>Sin amigos aún</p>
-      <p class="empty-sub">Añade amigos desde <a href="/profile" style="color:var(--cyan)">Amigos</a></p>
-    </div>
-    {% endif %}
-
+    {% endfor %}
   </div>
+  {% else %}
+  <div class="empty-state">
+    <svg width="24" height="24" class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    <p>Sin amigos aún</p>
+    <p class="empty-sub">Añade amigos desde <a href="/friends" style="color:var(--cyan)">Amigos</a></p>
+  </div>
+  {% endif %}
 </div>
-<script>
-fetch('/api/friends/pending-count').then(r=>r.json()).then(d=>{
-  if(d.count>0){const b=document.getElementById('friends-badge');b.textContent=d.count;b.style.display='';}
-});
-</script>
-<script>
-/* Last-page memory */
-(function() {
-  const path = location.pathname + location.search;
-  const skip = ['/', '/logout', '/register'];
-  if (!skip.includes(location.pathname)) {
-    localStorage.setItem('bh-last-page', path);
-  }
-})();
-</script>
-</body>
-</html>
+{% endblock %}

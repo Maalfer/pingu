@@ -105,6 +105,10 @@ def init_db() -> None:
             day INTEGER NOT NULL,
             month INTEGER NOT NULL,
             color TEXT DEFAULT '#06b6d4',
+            description TEXT NOT NULL DEFAULT '',
+            is_all_day INTEGER NOT NULL DEFAULT 1,
+            start_time TEXT,
+            end_time TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
@@ -119,6 +123,21 @@ def init_db() -> None:
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
         );
+
+        CREATE TABLE IF NOT EXISTS videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL DEFAULT 'Video',
+            file_path TEXT,
+            duration INTEGER DEFAULT 0,
+            size INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'downloading',
+            error_msg TEXT,
+            torrent_source TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER NOT NULL,
@@ -129,6 +148,22 @@ def init_db() -> None:
             FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            parent_id INTEGER,
+            name TEXT NOT NULL,
+            is_folder INTEGER NOT NULL DEFAULT 0,
+            color TEXT,
+            storage_path TEXT,
+            mime_type TEXT,
+            size INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_id) REFERENCES files(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_files_parent ON files(user_id, parent_id);
     """)
 
     c.execute("SELECT id FROM users WHERE username = 'admin' COLLATE NOCASE")
@@ -138,6 +173,20 @@ def init_db() -> None:
             "INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')",
             ("admin", hashed),
         )
+
+    cols = [r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()]
+    if "theme" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'dark'")
+
+    cal_cols = [r[1] for r in c.execute("PRAGMA table_info(calendar_events)").fetchall()]
+    if "description" not in cal_cols:
+        c.execute("ALTER TABLE calendar_events ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+    if "is_all_day" not in cal_cols:
+        c.execute("ALTER TABLE calendar_events ADD COLUMN is_all_day INTEGER NOT NULL DEFAULT 1")
+    if "start_time" not in cal_cols:
+        c.execute("ALTER TABLE calendar_events ADD COLUMN start_time TEXT")
+    if "end_time" not in cal_cols:
+        c.execute("ALTER TABLE calendar_events ADD COLUMN end_time TEXT")
 
     conn.commit()
     conn.close()
