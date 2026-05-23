@@ -359,25 +359,22 @@
   }
 
   /** Resuelve la referencia del embed a un path real del vault.
-   *  Estrategias en orden:
-   *    1. Tal cual (si el embed ya usa el path completo Adjuntos/foo.webp).
-   *    2. Por nombre exacto (window.BY_BASE/BY_PATH del propio notes.html).
+   *
+   *  notes.html ya expone `findFileByName(name)` que hace exactamente esto
+   *  (BY_PATH directo + BY_BASE por basename ± extensión). La reutilizamos
+   *  porque BY_PATH/BY_BASE son `let` y no están en `window`; las funciones
+   *  declaradas sí lo están.
    */
   function resolveImagePath(ref) {
     if (!ref) return null;
-    const trimmed = ref.replace(/^\.?\//, '');
-    // 1) Intento directo
-    if (window.BY_PATH && window.BY_PATH.get(trimmed.toLowerCase())) {
-      return window.BY_PATH.get(trimmed.toLowerCase()).path;
+    const cleaned = ref.replace(/^\.?\//, '').trim();
+    if (typeof window.findFileByName === 'function') {
+      try {
+        const hit = window.findFileByName(cleaned);
+        if (hit && hit.path) return hit.path;
+      } catch (_) { /* ignore */ }
     }
-    // 2) Por basename (último segmento, sin extensión y con extensión)
-    const base = trimmed.split('/').pop();
-    if (window.BY_BASE) {
-      const hit = window.BY_BASE.get(base.toLowerCase())
-               || window.BY_BASE.get(base.replace(/\.[^.]+$/, '').toLowerCase());
-      if (hit) return hit.path;
-    }
-    return trimmed;  // último recurso: pasamos lo que tenemos
+    return cleaned;  // último recurso: pasamos lo que tenemos
   }
 
   async function imageOp(view, op) {
