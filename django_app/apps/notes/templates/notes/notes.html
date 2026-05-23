@@ -1742,25 +1742,52 @@ $('btn-optimize-images').addEventListener('click', async () => {
     }
   }
 
-  // 3) Ejecutar bulk
+  // 3) Ejecutar bulk en streaming NDJSON con progreso real
   btn.textContent = 'Optimizando…';
-  $('storage-progress-msg').textContent = 'Recodificando imágenes y actualizando notas…';
+  $('storage-progress-msg').textContent = 'Preparando…';
+  // Pasar la barra a modo determinado
+  const bar = document.querySelector('.storage-progress-bar-fill');
+  bar.style.animation = 'none';
+  bar.style.width = '0%';
+  bar.style.left = '0';
+  bar.style.transition = 'width .2s ease';
+
+  let summary = null;
   try {
-    const r = await fetch('/api/notes/optimize-images', { method: 'POST' }).then(x => x.json());
-    if (!r.success) throw new Error(r.error || 'Error');
+    const r = await fetch('/api/notes/optimize-images', { method: 'POST' });
+    if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let upd;
+        try { upd = JSON.parse(line); } catch (_) { continue; }
+        handleOptimizeEvent(upd);
+        if (upd.phase === 'done')  summary = upd;
+        if (upd.phase === 'error') throw new Error(upd.error || 'Error');
+      }
+    }
     $('storage-progress').style.display = 'none';
-    const out = $('storage-result');
-    out.style.display = '';
-    out.textContent = `${r.converted} imágenes optimizadas, ${r.skipped} omitidas. Ahorrado: ${fmtBytes(r.saved_bytes)}.`;
-    // Refrescar stats
+    if (summary) {
+      const out = $('storage-result');
+      out.style.display = '';
+      out.textContent = `${summary.converted} imágenes optimizadas, ${summary.skipped} omitidas. Ahorrado: ${fmtBytes(summary.saved_bytes)}.`;
+    }
+    // Refrescar stats y árbol
     const s = await fetch('/api/notes/storage').then(x => x.json());
     if (s.success) renderStorageStats(s);
-    // Refrescar árbol/contenido por si las extensiones cambiaron
     await loadTree();
     if (current) {
-      const oldPath = current.path;
-      const candidate = oldPath.replace(/\.(jpe?g|png|bmp|tiff?|heic|avif)$/i, '.webp');
-      openNote(candidate);
+      const candidate = current.path.replace(/\.(jpe?g|png|bmp|tiff?|heic|avif)$/i, '.webp');
+      if (candidate !== current.path) openNote(candidate);
     }
   } catch (e) {
     $('storage-progress').style.display = 'none';
@@ -1768,8 +1795,43 @@ $('btn-optimize-images').addEventListener('click', async () => {
     err.textContent = 'Error: ' + e.message;
     err.style.display = '';
   } finally {
+    // Restaurar la barra al modo indeterminado para futuras ejecuciones.
+    bar.style.transition = '';
+    bar.style.width = '35%';
+    bar.style.animation = '';
     btn.disabled = false;
     btn.innerHTML = prev;
+  }
+
+  function handleOptimizeEvent(u) {
+    const msg = $('storage-progress-msg');
+    const fill = document.querySelector('.storage-progress-bar-fill');
+    switch (u.phase) {
+      case 'scan':
+        msg.textContent = 'Escaneando bóveda…';
+        break;
+      case 'start':
+        msg.textContent = u.total === 0
+          ? 'No hay imágenes ráster que optimizar.'
+          : `0 / ${u.total} imágenes`;
+        fill.style.width = u.total === 0 ? '100%' : '0%';
+        break;
+      case 'progress': {
+        const pct = u.total ? (u.i / u.total) * 100 : 0;
+        fill.style.width = pct.toFixed(1) + '%';
+        msg.textContent =
+          `${u.i} / ${u.total} · convertidas ${u.converted} · ahorrado ${fmtBytes(u.saved_bytes)}`;
+        break;
+      }
+      case 'rewriting':
+        msg.textContent = `Actualizando referencias en ${u.notes} notas…`;
+        fill.style.width = '100%';
+        break;
+      case 'done':
+        msg.textContent = `Listo: ${u.converted} convertidas, ${u.skipped} omitidas, ${fmtBytes(u.saved_bytes)} ahorrados.`;
+        fill.style.width = '100%';
+        break;
+    }
   }
 });
 document.addEventListener('click', e => {

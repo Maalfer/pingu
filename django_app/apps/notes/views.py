@@ -1,12 +1,15 @@
 """Vault de notas Markdown por usuario (lectura/escritura sobre disco)."""
 import io
 import json
+import logging
 import os
 import re
 import shutil
 import time
 import zipfile
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -63,12 +66,19 @@ def _build_tree(root: Path, directory: Path) -> list:
     items = []
     try:
         entries = sorted(directory.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
-    except FileNotFoundError:
+    except OSError:
         return items
     for entry in entries:
         if entry.name.startswith("."):
             continue
-        if entry.is_dir():
+        # `stat()` puede fallar si el archivo desapareció entre iterdir y
+        # aquí (race condition durante una operación bulk). Lo saltamos.
+        try:
+            is_dir = entry.is_dir()
+            mtime = int(entry.stat().st_mtime) if not is_dir else None
+        except OSError:
+            continue
+        if is_dir:
             items.append({
                 "type": "folder", "name": entry.name,
                 "path": _rel_of(root, entry),
@@ -78,14 +88,14 @@ def _build_tree(root: Path, directory: Path) -> list:
             items.append({
                 "type": "note", "name": entry.stem,
                 "path": _rel_of(root, entry),
-                "updated": int(entry.stat().st_mtime),
+                "updated": mtime,
             })
         else:
             items.append({
                 "type": "file", "name": entry.name,
                 "ext": entry.suffix.lower().lstrip("."),
                 "path": _rel_of(root, entry),
-                "updated": int(entry.stat().st_mtime),
+                "updated": mtime,
             })
     return items
 
@@ -287,94 +297,134 @@ def storage(request):
 @login_required
 @require_POST
 def optimize_images(request):
-    """Recodifica TODAS las imágenes ráster de la bóveda a WebP, in-place.
+    """Recodifica imágenes ráster de la bóveda a WebP, in-place.
 
-    Pasos:
-    1. Por cada imagen no-WebP/gif/svg, recodifica a WebP. Si el WebP NO
-       reduce tamaño, se descarta y se mantiene el original.
-    2. Para las imágenes recodificadas, renombra el archivo a .webp.
-    3. Recorre todos los .md y reemplaza referencias al nombre antiguo por
-       el nuevo (con regex que cubre wikilink + markdown image + raw path).
+    Devuelve una respuesta de tipo NDJSON (una línea JSON por evento) para
+    que el frontend pinte la barra de progreso en tiempo real:
 
-    Devuelve un resumen: archivos procesados, bytes ahorrados.
+      {"phase":"scan"}
+      {"phase":"start","total":N}
+      {"phase":"progress","i":k,"total":N,"name":"...","converted":c,"skipped":s,"saved_bytes":b}
+      {"phase":"rewriting","notes":M}
+      {"phase":"done","converted":...,"skipped":...,"saved_bytes":...}
+
+    En caso de error fatal: {"phase":"error","error":"..."}
     """
     import io
-    import re as _re
     try:
         from PIL import Image, ImageOps
     except ImportError:
         return _err("Pillow no instalado", 500)
     root = _user_root(request)
-    converted = 0           # imágenes recodificadas a WebP
-    skipped = 0             # imágenes que ya eran webp/gif/svg o no se redujeron
-    saved_bytes = 0
-    renames = []            # [(old_name_no_ext, old_name_full, new_name_full)]
 
-    for img_path in list(root.rglob("*")):
-        if not img_path.is_file():
-            continue
-        ext = img_path.suffix.lower()
-        if ext in {".webp", ".gif", ".svg", ".ico"} or ext not in _IMAGE_EXTS:
-            continue
+    def jline(obj):
+        return (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
+
+    def stream():
+        yield jline({"phase": "scan"})
+        # Lista de candidatas (ráster, no-webp/gif/svg/ico).
+        candidates = []
         try:
-            orig_size = img_path.stat().st_size
-            with img_path.open("rb") as fp:
-                img = Image.open(fp)
-                img.load()
-            img = ImageOps.exif_transpose(img)
-            if img.mode not in ("RGB", "RGBA"):
-                img = img.convert("RGBA" if "A" in img.mode else "RGB")
-            buf = io.BytesIO()
-            img.save(buf, "WEBP", quality=85, method=6)
-            new_data = buf.getvalue()
-        except Exception:
-            skipped += 1
-            continue
-        if len(new_data) >= orig_size:
-            skipped += 1
-            continue
-        # Escribir nuevo .webp y borrar el original
-        new_path = img_path.with_suffix(".webp")
-        # Si el .webp ya existe (caso raro), añadir sufijo numérico
-        if new_path.exists() and new_path != img_path:
-            i = 2
-            while img_path.with_name(f"{img_path.stem} {i}.webp").exists():
-                i += 1
-            new_path = img_path.with_name(f"{img_path.stem} {i}.webp")
-        new_path.write_bytes(new_data)
-        if new_path != img_path:
-            try:
-                img_path.unlink()
-            except OSError:
-                pass
-        saved_bytes += orig_size - len(new_data)
-        converted += 1
-        renames.append((img_path.name, new_path.name))
-
-    # Actualizar referencias en cada .md de la bóveda.
-    if renames:
-        for md in root.rglob("*.md"):
-            try:
-                text = md.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            new_text = text
-            for old_name, new_name in renames:
-                if old_name == new_name:
+            for p in root.rglob("*"):
+                try:
+                    if not p.is_file():
+                        continue
+                except OSError:
                     continue
-                # Reemplazo literal del nombre exacto. La mayoría de embeds en
-                # notas Obsidian son `![[name.png]]`, `![](Adjuntos/name.png)`,
-                # `<img src="...name.png">` — todos contienen el nombre completo.
-                new_text = new_text.replace(old_name, new_name)
-            if new_text != text:
-                md.write_text(new_text, encoding="utf-8")
+                ext = p.suffix.lower()
+                if ext in {".webp", ".gif", ".svg", ".ico"}:
+                    continue
+                if ext not in _IMAGE_EXTS:
+                    continue
+                candidates.append(p)
+        except OSError as exc:
+            yield jline({"phase": "error", "error": f"Error escaneando: {exc}"})
+            return
 
-    return JsonResponse({
-        "success": True,
-        "converted": converted,
-        "skipped": skipped,
-        "saved_bytes": saved_bytes,
-    })
+        total = len(candidates)
+        yield jline({"phase": "start", "total": total})
+
+        converted = skipped = saved_bytes = 0
+        renames = []
+
+        for i, img_path in enumerate(candidates, start=1):
+            try:
+                orig_size = img_path.stat().st_size
+                with img_path.open("rb") as fp:
+                    img = Image.open(fp); img.load()
+                img = ImageOps.exif_transpose(img)
+                if img.mode not in ("RGB", "RGBA"):
+                    img = img.convert("RGBA" if "A" in img.mode else "RGB")
+                buf = io.BytesIO()
+                img.save(buf, "WEBP", quality=85, method=6)
+                new_data = buf.getvalue()
+            except Exception:
+                skipped += 1
+                yield jline({"phase": "progress", "i": i, "total": total,
+                             "name": img_path.name, "converted": converted,
+                             "skipped": skipped, "saved_bytes": saved_bytes})
+                continue
+            if len(new_data) >= orig_size:
+                skipped += 1
+                yield jline({"phase": "progress", "i": i, "total": total,
+                             "name": img_path.name, "converted": converted,
+                             "skipped": skipped, "saved_bytes": saved_bytes})
+                continue
+            new_path = img_path.with_suffix(".webp")
+            if new_path.exists() and new_path != img_path:
+                n = 2
+                while img_path.with_name(f"{img_path.stem} {n}.webp").exists():
+                    n += 1
+                new_path = img_path.with_name(f"{img_path.stem} {n}.webp")
+            try:
+                new_path.write_bytes(new_data)
+                if new_path != img_path:
+                    try:
+                        img_path.unlink()
+                    except OSError as exc:
+                        log.warning("optimize: unlink %s falló: %s", img_path, exc)
+            except OSError as exc:
+                log.warning("optimize: write %s falló: %s", new_path, exc)
+                skipped += 1
+                yield jline({"phase": "progress", "i": i, "total": total,
+                             "name": img_path.name, "converted": converted,
+                             "skipped": skipped, "saved_bytes": saved_bytes})
+                continue
+            saved_bytes += orig_size - len(new_data)
+            converted += 1
+            renames.append((img_path.name, new_path.name))
+            # Yield cada 5 imágenes para no inundar el wire (~10/s típico).
+            if i % 5 == 0 or i == total:
+                yield jline({"phase": "progress", "i": i, "total": total,
+                             "name": img_path.name, "converted": converted,
+                             "skipped": skipped, "saved_bytes": saved_bytes})
+
+        # Reescribir referencias en notas.
+        if renames:
+            md_files = list(root.rglob("*.md"))
+            yield jline({"phase": "rewriting", "notes": len(md_files)})
+            for md in md_files:
+                try:
+                    text = md.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                new_text = text
+                for old_name, new_name in renames:
+                    if old_name != new_name:
+                        new_text = new_text.replace(old_name, new_name)
+                if new_text != text:
+                    try:
+                        md.write_text(new_text, encoding="utf-8")
+                    except OSError as exc:
+                        log.warning("optimize: write md %s falló: %s", md, exc)
+
+        yield jline({"phase": "done", "converted": converted,
+                     "skipped": skipped, "saved_bytes": saved_bytes})
+
+    resp = StreamingHttpResponse(stream(), content_type="application/x-ndjson")
+    resp["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp["X-Accel-Buffering"] = "no"   # nginx: no bufferizar (flush inmediato)
+    return resp
 
 
 @login_required
