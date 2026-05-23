@@ -1,0 +1,13 @@
+Django>=6.0,<6.1
+gunicorn>=26.0
+uvicorn[standard]>=0.46
+whitenoise>=6.12
+Pillow>=12.0
+bcrypt>=5.0
+pywebpush>=2.3
+py-vapid>=1.9
+requests>=2.34
+yt-dlp>=2026.3
+
+# MariaDB / MySQL driver. Requiere libmariadb-dev y python3-dev en el SO.
+mysqlclient>=2.2
