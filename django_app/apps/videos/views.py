@@ -1,5 +1,6 @@
 """Videoteca: descarga de torrents en background con aria2c + streaming con range."""
 import json
+import logging
 import re
 import secrets
 import shutil
@@ -21,7 +22,13 @@ from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST, require_GET
 
 from apps.core.api import error_response as _err
+from apps.core.constants import (
+    ARIA2_MAX_PEERS, ARIA2_STOP_TIMEOUT,
+    MAX_VIDEO_TITLE_LENGTH, STREAM_CHUNK_SIZE,
+)
 from .models import Video
+
+log = logging.getLogger(__name__)
 
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".ts", ".mpg", ".mpeg"}
@@ -64,8 +71,8 @@ def _video_duration(file_path: Path) -> int:
         if out.returncode == 0:
             info = json.loads(out.stdout)
             return int(float(info.get("format", {}).get("duration", 0)))
-    except Exception:
-        pass
+    except (subprocess.SubprocessError, json.JSONDecodeError, ValueError) as exc:
+        log.debug("_video_duration_seconds: ffprobe error: %s", exc)
     return 0
 
 
@@ -109,8 +116,8 @@ def _do_torrent_download(video_id: int, source: str, is_file_path: bool):
         "aria2c", f"--dir={download_dir}", "--seed-time=0", "--file-allocation=none",
         "--max-connection-per-server=16", "--split=16", "--min-split-size=1M",
         "--enable-dht=true", "--enable-peer-exchange=true",
-        "--follow-torrent=true", "--bt-stop-timeout=300", "--bt-tracker-timeout=60",
-        "--bt-max-peers=100", "--piece-length=1M", "--summary-interval=1",
+        "--follow-torrent=true", f"--bt-stop-timeout={ARIA2_STOP_TIMEOUT}", "--bt-tracker-timeout=60",
+        f"--bt-max-peers={ARIA2_MAX_PEERS}", "--piece-length=1M", "--summary-interval=1",
         "--max-overall-download-limit=0", source,
     ]
     try:
@@ -142,8 +149,8 @@ def _do_torrent_download(video_id: int, source: str, is_file_path: bool):
         if is_file_path:
             try:
                 Path(source).unlink(missing_ok=True)
-            except Exception:
-                pass
+            except OSError as exc:
+                log.warning("torrent download cleanup failed for %s: %s", source, exc)
 
 
 def _fetch_torrent_url(url: str) -> dict:
@@ -292,7 +299,7 @@ def rename_video(request):
     if not title:
         return _err("Título vacío")
     v = get_object_or_404(Video, pk=video_id, user=request.user)
-    v.title = title[:300]
+    v.title = title[:MAX_VIDEO_TITLE_LENGTH]
     v.save(update_fields=["title"])
     return JsonResponse({"success": True})
 
@@ -347,7 +354,7 @@ def stream(request, video_id):
             end = min(end, file_size - 1)
             status_code = 206
 
-    chunk_size = 1024 * 512
+    chunk_size = STREAM_CHUNK_SIZE
 
     def iterfile():
         with open(file_path, "rb") as f:

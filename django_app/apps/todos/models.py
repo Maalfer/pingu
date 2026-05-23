@@ -11,6 +11,9 @@ class Todo(models.Model):
 
     class Meta:
         ordering = ("done", "-created_at")
+        indexes = [
+            models.Index(fields=["user", "done"]),
+        ]
 
     def __str__(self) -> str:
         return self.title

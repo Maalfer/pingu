@@ -23,6 +23,10 @@ class Friendship(models.Model):
     class Meta:
         unique_together = ("requester", "addressee")
         ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["requester", "status"]),
+            models.Index(fields=["addressee", "status"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.requester} → {self.addressee} ({self.status})"

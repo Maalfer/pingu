@@ -201,7 +201,7 @@
 <script>window.APP = window.APP || { csrf: "{{ csrf_token|default:'' }}", userId: {{ user_id|default:'null' }} };</script>
 <script src="/static/js/player.js?v={{ ASSET_VERSION }}" defer></script>
 
-{% include "_video_player.html" %}
+{% include "core/_video_player.html" %}
 <script src="/static/js/video-player.js?v={{ ASSET_VERSION }}" defer></script>
 {% endif %}
 

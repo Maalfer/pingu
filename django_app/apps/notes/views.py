@@ -270,6 +270,13 @@ def search(request):
 @login_required
 @require_POST
 def upload(request):
+    """Sube un asset (imagen u otro) a la bóveda del usuario.
+
+    Si es una imagen rasterizada (jpg/png/bmp/tiff/heic/jpeg), la
+    recodificamos a WebP para reducir peso (~30-50%) preservando calidad.
+    Animados (gif), vectoriales (svg) y formatos sin Pillow soporte se
+    guardan tal cual. WebP ya optimizado también se guarda sin recodificar.
+    """
     root = _user_root(request)
     f = request.FILES.get("file")
     if not f:
@@ -280,7 +287,15 @@ def upload(request):
     except ValueError as e:
         return _err(str(e))
     target_dir.mkdir(parents=True, exist_ok=True)
+
     fname = _sanitize_name(f.name)
+    optimized_bytes, new_ext = _maybe_to_webp(f)
+
+    if new_ext:
+        # Cambiamos la extensión al .webp resultante.
+        stem = Path(fname).stem or "imagen"
+        fname = f"{stem}.webp"
+
     target = target_dir / fname
     if target.exists():
         stem, suf = target.stem, target.suffix
@@ -288,11 +303,60 @@ def upload(request):
         while (target_dir / f"{stem} {n}{suf}").exists():
             n += 1
         target = target_dir / f"{stem} {n}{suf}"
-    with open(target, "wb") as fp:
-        for chunk in f.chunks():
-            fp.write(chunk)
-    return JsonResponse({"success": True, "name": target.name,
-                         "path": _rel_of(root, target)})
+
+    if optimized_bytes is not None:
+        target.write_bytes(optimized_bytes)
+    else:
+        with open(target, "wb") as fp:
+            for chunk in f.chunks():
+                fp.write(chunk)
+    return JsonResponse({
+        "success": True,
+        "name": target.name,
+        "path": _rel_of(root, target),
+    })
+
+
+# Formatos que NO recodificamos a WebP (anim/vectorial/icono/ya-webp).
+_KEEP_AS_IS = {".gif", ".svg", ".ico", ".webp"}
+
+
+def _maybe_to_webp(uploaded_file):
+    """Devuelve `(bytes_optimizados, '.webp')` si conviene recodificar, o
+    `(None, None)` si dejamos el archivo tal cual.
+
+    No re-codifica si:
+    - El archivo no es una imagen reconocible por Pillow.
+    - Es una extensión que mantenemos sin tocar (`_KEEP_AS_IS`).
+    - El WebP resultante quedaría MAYOR que el original.
+    """
+    import io
+    ext = Path(uploaded_file.name or "").suffix.lower()
+    if ext in _KEEP_AS_IS:
+        return None, None
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None, None
+    try:
+        # Leer en memoria. Para imágenes muy grandes, Pillow ya gestiona
+        # streaming interno; aquí asumimos que entran en RAM (típico < 20 MB).
+        data = b"".join(uploaded_file.chunks())
+        img = Image.open(io.BytesIO(data))
+        # Respetar rotación EXIF antes de re-codificar.
+        img = ImageOps.exif_transpose(img)
+        # Convertir paletas/CMYK a RGB(A) para WebP.
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGBA" if "A" in img.mode else "RGB")
+        buf = io.BytesIO()
+        img.save(buf, "WEBP", quality=85, method=6)
+        out = buf.getvalue()
+        if len(out) >= len(data):
+            return None, None
+        return out, ".webp"
+    except Exception:
+        # Si Pillow no entiende el formato, guardamos el archivo original.
+        return None, None
 
 
 @login_required

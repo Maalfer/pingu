@@ -45,8 +45,8 @@ def delete_user(request):
     for path in target.songs.values_list("file_path", flat=True):
         try:
             Path(path).unlink(missing_ok=True)
-        except Exception:
-            pass
+        except OSError as exc:
+            log.warning("delete_user: failed to unlink song file %s: %s", path, exc)
     InviteToken.objects.filter(used_by=target).update(used_by=None)
     target.delete()
     _log(request.user, "admin_delete_user", f"Eliminó usuario ID {target_id}")

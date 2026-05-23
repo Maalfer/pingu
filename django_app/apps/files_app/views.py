@@ -186,8 +186,8 @@ def api_upload(request):
         node.delete()
         try:
             storage_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        except OSError as cleanup_exc:
+            log.warning("api_upload cleanup failed for %s: %s", storage_path, cleanup_exc)
         return _err(f"Error guardando archivo: {exc}", 500)
     node.storage_path = str(storage_path)
     node.save(update_fields=["storage_path"])
@@ -275,8 +275,8 @@ def api_delete(request):
     for p in storage_paths:
         try:
             Path(p).unlink(missing_ok=True)
-        except Exception:
-            pass
+        except OSError as exc:
+            log.warning("api_delete: failed to unlink %s: %s", p, exc)
     return JsonResponse({"success": True})
 
 

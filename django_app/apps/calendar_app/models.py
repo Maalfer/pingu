@@ -17,6 +17,9 @@ class CalendarEvent(models.Model):
 
     class Meta:
         ordering = ("month", "day", "start_time")
+        indexes = [
+            models.Index(fields=["user", "month", "day"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.day}/{self.month} — {self.title}"

@@ -1,5 +1,6 @@
 """App de música — biblioteca de canciones."""
 import json
+import logging
 from pathlib import Path
 
 from django.conf import settings
@@ -9,7 +10,10 @@ from django.http import JsonResponse, FileResponse, Http404
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST, require_GET
 
+from apps.core.constants import YOUTUBE_DOMAINS
 from .models import Song
+
+log = logging.getLogger(__name__)
 
 
 @login_required
@@ -53,7 +57,7 @@ def download(request):
     """
     data = json.loads(request.body or "{}")
     url = (data.get("url") or "").strip()
-    if not url or ("youtube.com" not in url and "youtu.be" not in url):
+    if not url or not any(d in url for d in YOUTUBE_DOMAINS):
         return JsonResponse({"error": "URL de YouTube inválida"}, status=400)
     try:
         import yt_dlp
@@ -111,7 +115,7 @@ def delete_song(request):
     song = get_object_or_404(Song, pk=data.get("song_id"), user=request.user)
     try:
         Path(song.file_path).unlink(missing_ok=True)
-    except Exception:
-        pass
+    except OSError as exc:
+        log.warning("delete_song: failed to unlink %s: %s", song.file_path, exc)
     song.delete()
     return JsonResponse({"success": True})

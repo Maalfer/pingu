@@ -21,6 +21,9 @@ class Video(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["user", "status"]),
+        ]
 
     def __str__(self) -> str:
         return self.title
