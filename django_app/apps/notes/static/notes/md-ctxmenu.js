@@ -47,7 +47,7 @@
     { key: 'quote',     label: 'Cita',             kbd: '',            kind: 'prefix',  prefix: '> ' },
     { sep: true },
     { key: 'codeblock', label: 'Bloque de código', kbd: '',            kind: 'block',   snippet: '```\ncódigo\n```' },
-    { key: 'table',     label: 'Tabla',            kbd: '',            kind: 'block',   snippet: '| Columna 1 | Columna 2 |\n| --- | --- |\n| celda | celda |\n| celda | celda |' },
+    { key: 'table',     label: 'Tabla',            kbd: '',            kind: 'block',   snippet: '| Columna 1 | Columna 2 | Columna 3 |\n| --- | --- | --- |\n| celda | celda | celda |\n| celda | celda | celda |' },
     { key: 'hr',        label: 'Línea separadora', kbd: '',            kind: 'block',   snippet: '\n---\n' },
   ];
 
@@ -193,16 +193,32 @@
     return parts;
   }
 
+  // Texto de relleno para celdas/columnas/cabeceras nuevas: ayuda visual al
+  // usuario (sabe dónde escribir) y garantiza que la fila siga siendo una fila
+  // markdown válida (`|  |  |` con celdas vacías a veces se pliega visualmente).
+  const PH_CELL = 'celda';
+  const PH_HEADER = 'Columna';
+
   function buildRow(cells) {
-    return '| ' + cells.map(c => c.trim() || ' ').join(' | ') + ' |';
+    return '| ' + cells.map(c => (c == null ? '' : String(c)).trim() || PH_CELL).join(' | ') + ' |';
   }
 
   function buildSepRow(colCount) {
     return '| ' + Array(colCount).fill('---').join(' | ') + ' |';
   }
 
+  /** Fila nueva: todas las celdas con el placeholder de texto. */
   function emptyRow(colCount) {
-    return '| ' + Array(colCount).fill(' ').join(' | ') + ' |';
+    return '| ' + Array(colCount).fill(PH_CELL).join(' | ') + ' |';
+  }
+
+  /** Cabecera nueva (sólo para `colLeft/colRight`): la celda añadida usa
+   *  `Columna N` para que se distinga semánticamente de las del cuerpo. */
+  function headerCellLabel(existingHeader) {
+    // Sugerir el siguiente número de columna mirando las existentes.
+    const m = (existingHeader || []).map(c => /Columna\s+(\d+)/i.exec(String(c)));
+    const max = m.reduce((acc, r) => r ? Math.max(acc, parseInt(r[1], 10)) : acc, 0);
+    return `${PH_HEADER} ${max + 1}`;
   }
 
   function tableOp(view, op) {
@@ -215,33 +231,24 @@
     const targetCol = columnAtPos(st, cursorLineNumber, sel.from);
 
     if (op === 'rowAbove' || op === 'rowBelow') {
-      // No permitimos insertar en la línea separadora.
-      let insertAfter = cursorLineNumber;
-      if (op === 'rowAbove') insertAfter = Math.max(tbl.headerLine, cursorLineNumber - 1);
-      if (insertAfter === tbl.headerLine && op === 'rowAbove') insertAfter = tbl.headerLine; // no podemos ir antes del header
+      // Reglas:
+      //  - Cursor en header/separador: la fila nueva entra como PRIMERA fila
+      //    del cuerpo (justo después del separador).
+      //  - Cursor en una fila del cuerpo: insertamos arriba/abajo de esa fila.
       const newRow = emptyRow(tbl.colCount);
-      // Inserciones: añadimos la nueva línea justo después de `insertAfter`.
-      // No insertamos antes del header.
-      const targetLineN = op === 'rowAbove'
-        ? Math.max(tbl.sepLine + 1, cursorLineNumber)    // arriba de la fila actual (no del header/sep)
-        : Math.max(tbl.sepLine, cursorLineNumber) + 1;    // debajo
-      const line = st.doc.line(Math.min(targetLineN, st.doc.lines));
-      // Si "targetLineN" supera el final del doc, añadimos al final del doc.
+      const onHeaderOrSep = (cursorLineNumber === tbl.headerLine || cursorLineNumber === tbl.sepLine);
       let from, insert;
-      if (op === 'rowBelow' && cursorLineNumber === tbl.endLine && tbl.endLine === st.doc.lines) {
-        // Última línea del documento: insert al final, sin línea previa.
-        from = st.doc.line(tbl.endLine).to;
+      if (onHeaderOrSep) {
+        const sepLn = st.doc.line(tbl.sepLine);
+        from = sepLn.to;
         insert = '\n' + newRow;
       } else if (op === 'rowAbove') {
-        // Insertamos antes de la línea targetLineN: usamos el `from` de esa línea.
-        const realTarget = Math.max(tbl.sepLine + 1, cursorLineNumber);
-        const target = st.doc.line(realTarget);
+        const target = st.doc.line(cursorLineNumber);
         from = target.from;
         insert = newRow + '\n';
       } else {
-        // rowBelow: insertamos después de cursorLineNumber (o sep si estamos sobre header).
-        const realTarget = (cursorLineNumber === tbl.headerLine) ? tbl.sepLine : cursorLineNumber;
-        const target = st.doc.line(realTarget);
+        // rowBelow
+        const target = st.doc.line(cursorLineNumber);
         from = target.to;
         insert = '\n' + newRow;
       }
@@ -253,18 +260,21 @@
     if (op === 'colLeft' || op === 'colRight') {
       const col = targetCol;
       const insertIdx = op === 'colLeft' ? col : col + 1;
+      const headerCells = splitCells(st.doc.line(tbl.headerLine).text);
+      const newHeader = headerCellLabel(headerCells);
       const changes = [];
       for (let n = tbl.startLine; n <= tbl.endLine; n++) {
         const ln = st.doc.line(n);
-        let cells;
         if (n === tbl.sepLine) {
-          // separator: cells de '---'
-          cells = Array(tbl.colCount).fill('---');
-          cells.splice(insertIdx, 0, '---');
-          changes.push({ from: ln.from, to: ln.to, insert: '| ' + cells.join(' | ') + ' |' });
+          // Separador: regenerado completo con N+1 celdas '---'.
+          changes.push({ from: ln.from, to: ln.to, insert: buildSepRow(tbl.colCount + 1) });
+        } else if (n === tbl.headerLine) {
+          const cells = splitCells(ln.text);
+          cells.splice(insertIdx, 0, newHeader);
+          changes.push({ from: ln.from, to: ln.to, insert: buildRow(cells) });
         } else {
-          cells = splitCells(ln.text);
-          cells.splice(insertIdx, 0, ' ');
+          const cells = splitCells(ln.text);
+          cells.splice(insertIdx, 0, PH_CELL);
           changes.push({ from: ln.from, to: ln.to, insert: buildRow(cells) });
         }
       }
