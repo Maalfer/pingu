@@ -82,34 +82,24 @@ TEMPLATES = [{
 }]
 
 # ── BD ────────────────────────────────────────────────────────────────────────
-# Por defecto MariaDB/MySQL en producción; SQLite si DB_ENGINE=sqlite.
-_db_engine = os.environ.get("DB_ENGINE", "mysql").lower()
-if _db_engine == "sqlite":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "data" / "balusong.sqlite3",
-            "OPTIONS": {"timeout": 20, "init_command": "PRAGMA journal_mode=WAL;"},
-        }
+# MariaDB / MySQL — credenciales por variables de entorno (.env).
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.environ.get("DB_NAME", "baluhome"),
+        "USER": os.environ.get("DB_USER", "baluhome"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+        "PORT": os.environ.get("DB_PORT", "3306"),
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            # STRICT_TRANS_TABLES evita inserts silenciosos truncados.
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+        "CONN_MAX_AGE": 60,        # reusa la conexión 60 s entre requests
+        "CONN_HEALTH_CHECKS": True, # pinguea al reciclar
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get("DB_NAME", "baluhome"),
-            "USER": os.environ.get("DB_USER", "baluhome"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
-            "PORT": os.environ.get("DB_PORT", "3306"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-                # STRICT_TRANS_TABLES previene inserts silenciosos truncados.
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-            "CONN_MAX_AGE": 60,  # reusar conexiones 60s entre requests
-            "CONN_HEALTH_CHECKS": True,
-        }
-    }
+}
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"

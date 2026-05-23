@@ -8,7 +8,6 @@ venv/
 
 # ── Datos de usuario — NUNCA al repo ────────────────────────────
 data/
-**/data/balusong.sqlite3
 uploads/
 **/.obsidian/
 **/.trash/
