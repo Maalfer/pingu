@@ -579,34 +579,81 @@
 </div>
 
 <!-- Almacenamiento de la bóveda -->
-<div class="modal-back" id="storage-modal">
-  <div class="modal">
-    <h3>Almacenamiento de la bóveda</h3>
-    <div id="storage-loading" class="storage-loading">Calculando…</div>
-    <div id="storage-body" class="storage-body" style="display:none">
-      <div class="storage-total">
-        <span class="storage-total-label">Tamaño total</span>
-        <span class="storage-total-val" id="storage-total">—</span>
+<div class="modal-back storage-back" id="storage-modal">
+  <div class="storage-sheet">
+    <header class="storage-header">
+      <div>
+        <h3>Almacenamiento</h3>
+        <p class="storage-sub">Resumen de tu bóveda</p>
       </div>
-      <div class="storage-rows" id="storage-rows"></div>
+      <button class="storage-close" id="storage-cancel" aria-label="Cerrar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </header>
+
+    <div id="storage-loading" class="storage-loading">
+      <div class="spinner" style="width:32px;height:32px;border-width:3px;margin:0 auto"></div>
+      <p>Calculando…</p>
+    </div>
+
+    <div id="storage-body" class="storage-body" style="display:none">
+      <!-- Hero: tamaño total -->
+      <div class="storage-hero">
+        <div class="storage-hero-label">Tamaño total</div>
+        <div class="storage-hero-val" id="storage-total">—</div>
+        <div class="storage-stack" id="storage-stack" aria-hidden="true"></div>
+      </div>
+
+      <!-- Grid de 3 categorías -->
+      <div class="storage-grid">
+        <div class="storage-card" data-kind="notes">
+          <div class="storage-card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg></div>
+          <div class="storage-card-label">Notas</div>
+          <div class="storage-card-val" id="storage-notes-bytes">—</div>
+          <div class="storage-card-meta" id="storage-notes-n">—</div>
+        </div>
+        <div class="storage-card" data-kind="images">
+          <div class="storage-card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>
+          <div class="storage-card-label">Imágenes</div>
+          <div class="storage-card-val" id="storage-images-bytes">—</div>
+          <div class="storage-card-meta" id="storage-images-n">—</div>
+        </div>
+        <div class="storage-card" data-kind="other">
+          <div class="storage-card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z"/></svg></div>
+          <div class="storage-card-label">Otros</div>
+          <div class="storage-card-val" id="storage-other-bytes">—</div>
+          <div class="storage-card-meta" id="storage-other-n">—</div>
+        </div>
+      </div>
+
       <div class="storage-foot">
         <span id="storage-files">—</span>
+        <span class="storage-foot-sep">·</span>
         <span id="storage-folders">—</span>
       </div>
-      <div class="storage-action">
-        <button class="btn-primary" id="btn-optimize-images">Optimizar imágenes…</button>
-        <small class="storage-hint">Hace un backup primero y después recodifica las imágenes a WebP.</small>
-      </div>
+
+      <!-- Sección de acción -->
+      <section class="storage-action-box">
+        <div class="storage-action-head">
+          <div>
+            <div class="storage-action-title">Optimizar imágenes</div>
+            <div class="storage-action-desc">Recodifica todas las imágenes ráster a WebP. Antes descargamos un backup ZIP de toda tu bóveda.</div>
+          </div>
+        </div>
+        <button class="btn-primary storage-action-btn" id="btn-optimize-images">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" transform="rotate(45 12 12)"/></svg>
+          Optimizar imágenes
+        </button>
+      </section>
+
       <div id="storage-progress" class="storage-progress" style="display:none">
         <div class="storage-progress-msg" id="storage-progress-msg">Trabajando…</div>
         <div class="storage-progress-bar"><div class="storage-progress-bar-fill"></div></div>
       </div>
-      <div id="storage-result" class="alert alert-success" style="display:none"></div>
+      <div id="storage-result" class="storage-result" style="display:none"></div>
     </div>
-    <div id="storage-err" class="alert alert-error" style="display:none"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" id="storage-cancel">Cerrar</button>
-    </div>
+
+    <div id="storage-err" class="storage-error" style="display:none"></div>
   </div>
 </div>
 {% endblock %}
@@ -1610,27 +1657,29 @@ async function openStorageModal() {
 }
 function renderStorageStats(s) {
   $('storage-total').textContent = fmtBytes(s.total_bytes);
-  const totalNonZero = Math.max(1, s.total_bytes);
-  const rows = [
-    {label: 'Notas Markdown', n: s.n_notes, bytes: s.notes_bytes, color: '#22c55e'},
-    {label: 'Imágenes', n: s.n_images, bytes: s.images_bytes, color: '#06b6d4'},
-    {label: 'Otros archivos', n: s.n_other, bytes: s.other_bytes, color: '#a855f7'},
+  const tot = Math.max(1, s.total_bytes);
+  // Barra apilada (segments)
+  const segs = [
+    {bytes: s.notes_bytes,  color: 'var(--storage-c-notes)'},
+    {bytes: s.images_bytes, color: 'var(--storage-c-images)'},
+    {bytes: s.other_bytes,  color: 'var(--storage-c-other)'},
   ];
-  let html = '';
-  for (const row of rows) {
-    const pct = (row.bytes / totalNonZero) * 100;
-    html += `<div class="storage-row">
-      <div class="storage-row-head">
-        <span class="storage-row-label" style="color:${row.color}">●</span>
-        <span class="storage-row-label">${row.label}</span>
-        <span class="storage-row-meta">${row.n} archivo${row.n===1?'':'s'} · ${fmtBytes(row.bytes)}</span>
-      </div>
-      <div class="storage-row-bar"><div class="storage-row-bar-fill" style="width:${pct.toFixed(1)}%;background:${row.color}"></div></div>
-    </div>`;
-  }
-  $('storage-rows').innerHTML = html;
-  $('storage-files').textContent = `${s.n_notes + s.n_images + s.n_other} archivos`;
-  $('storage-folders').textContent = `${s.n_folders} carpetas`;
+  $('storage-stack').innerHTML = segs
+    .map(seg => `<span style="width:${((seg.bytes/tot)*100).toFixed(2)}%;background:${seg.color}"></span>`)
+    .join('');
+
+  // Cards
+  $('storage-notes-bytes').textContent  = fmtBytes(s.notes_bytes);
+  $('storage-images-bytes').textContent = fmtBytes(s.images_bytes);
+  $('storage-other-bytes').textContent  = fmtBytes(s.other_bytes);
+  const f = (n, label) => `${n} ${label}${n === 1 ? '' : 's'}`;
+  $('storage-notes-n').textContent  = f(s.n_notes,  'archivo');
+  $('storage-images-n').textContent = f(s.n_images, 'archivo');
+  $('storage-other-n').textContent  = f(s.n_other,  'archivo');
+
+  const total = s.n_notes + s.n_images + s.n_other;
+  $('storage-files').textContent   = f(total, 'archivo');
+  $('storage-folders').textContent = `${s.n_folders} carpeta${s.n_folders===1?'':'s'}`;
 }
 $('storage-cancel').addEventListener('click', () => $('storage-modal').classList.remove('show'));
 
