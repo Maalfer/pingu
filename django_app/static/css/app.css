@@ -5513,3 +5513,85 @@ body.subapp-body:not(.subapp-body-shop):not(.chat-app-body) .subapp-content {
   background: var(--border);
   margin: 4px 2px;
 }
+
+/* Variante "danger" para opciones destructivas del menú de tabla */
+.md-ctxmenu-danger { color: #ef4444; }
+.md-ctxmenu-danger:hover,
+.md-ctxmenu-danger:focus-visible { background: rgba(239,68,68,.1); color: #ef4444; }
+
+/* ============================================================
+   Tema claro/aqua/rosa: arreglar contraste en /notes/
+   ── Tablas, separadores y bordes de bloques renderizados
+   ============================================================ */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) {
+  --note-line-strong: #1f2933;   /* casi negro para tablas / hr */
+  --note-line-soft: #c8d0d8;     /* gris medio para bordes suaves */
+  --note-code-bg: #f3f4f6;
+  --note-code-border: #d1d5db;
+  --note-quote-bg: #f6f8fa;
+}
+
+/* Tablas Markdown dentro del editor Live Preview */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body table {
+  border-collapse: collapse;
+}
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body table,
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body th,
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body td {
+  border: 1px solid var(--note-line-strong) !important;
+}
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body th {
+  background: #eef1f4;
+  color: var(--note-line-strong);
+  font-weight: 700;
+}
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body td {
+  color: #1f2933;
+}
+
+/* Línea separadora <hr> */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body hr {
+  border: 0;
+  border-top: 2px solid var(--note-line-strong);
+  margin: 1.2em 0;
+}
+
+/* Bloques de código inline y multilínea */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body code {
+  background: var(--note-code-bg);
+  border: 1px solid var(--note-code-border);
+  color: #111827;
+  padding: .12em .35em;
+  border-radius: 4px;
+}
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body pre {
+  background: var(--note-code-bg);
+  border: 1px solid var(--note-code-border);
+  border-radius: 6px;
+}
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body pre code {
+  background: transparent;
+  border: 0;
+}
+
+/* Blockquote / cita */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body blockquote {
+  border-left: 4px solid var(--note-line-strong);
+  background: var(--note-quote-bg);
+  color: #1f2933;
+  padding: .35em .9em;
+}
+
+/* Headings: bordes inferiores para H1/H2 (legibilidad) */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body h1,
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .cm-lp-block.markdown-body h2 {
+  border-bottom: 1px solid var(--note-line-soft);
+  padding-bottom: .2em;
+}
+
+/* kbd en tema claro: contraste */
+:root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .md-ctxmenu kbd {
+  background: #fff;
+  color: #111827;
+  border-color: #c8d0d8;
+}

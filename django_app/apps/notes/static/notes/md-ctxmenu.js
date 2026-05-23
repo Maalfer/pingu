@@ -16,6 +16,20 @@
 (function () {
   'use strict';
 
+  // Opciones específicas de tabla: se anteponen al menú estándar cuando el
+  // cursor está dentro de una tabla markdown.
+  const TABLE_OPTIONS = [
+    { key: 'tbl_row_above',  label: 'Insertar fila arriba',     kind: 'table_op', op: 'rowAbove' },
+    { key: 'tbl_row_below',  label: 'Insertar fila debajo',     kind: 'table_op', op: 'rowBelow' },
+    { key: 'tbl_col_left',   label: 'Insertar columna izq.',    kind: 'table_op', op: 'colLeft' },
+    { key: 'tbl_col_right',  label: 'Insertar columna dcha.',   kind: 'table_op', op: 'colRight' },
+    { sep: true },
+    { key: 'tbl_del_row',    label: 'Eliminar fila',            kind: 'table_op', op: 'delRow',     danger: true },
+    { key: 'tbl_del_col',    label: 'Eliminar columna',         kind: 'table_op', op: 'delCol',     danger: true },
+    { key: 'tbl_del',        label: 'Eliminar tabla',           kind: 'table_op', op: 'delTable',   danger: true },
+    { sep: true },
+  ];
+
   const OPTIONS = [
     { key: 'bold',      label: 'Negrita',          kbd: 'Ctrl+B',      kind: 'wrap',    pre: '**', post: '**', placeholder: 'texto' },
     { key: 'italic',    label: 'Cursiva',          kbd: 'Ctrl+I',      kind: 'wrap',    pre: '*',  post: '*',  placeholder: 'texto' },
@@ -121,45 +135,235 @@
     view.focus();
   }
 
+  // ── Detección / edición de tablas markdown ───────────────────────────────
+  const ROW_RE = /^\s*\|.*\|\s*$/;
+  const SEP_RE = /^\s*\|(\s*:?-{3,}:?\s*\|)+\s*$/;
+
+  /** Detecta la tabla que contiene la línea `lineNumber`.
+   *  Devuelve {startLine, endLine, headerLine, sepLine, rowCount, colCount}
+   *  o `null` si no hay tabla válida en esa posición. */
+  function detectTable(state, lineNumber) {
+    const doc = state.doc;
+    const ln = doc.line(lineNumber);
+    if (!ROW_RE.test(ln.text)) return null;
+    // Subir hasta el inicio de la tabla.
+    let start = lineNumber;
+    while (start > 1 && ROW_RE.test(doc.line(start - 1).text)) start--;
+    // Bajar hasta el final.
+    let end = lineNumber;
+    while (end < doc.lines && ROW_RE.test(doc.line(end + 1).text)) end++;
+    if (end - start < 1) return null;             // necesita header + separador como mínimo
+    const headerLine = start;
+    const sepLine = start + 1;
+    if (!SEP_RE.test(doc.line(sepLine).text)) return null;
+    // Número de columnas = celdas del header (sin contar bordes vacíos).
+    const headerCells = splitCells(doc.line(headerLine).text);
+    const colCount = headerCells.length;
+    return {
+      startLine: start,
+      endLine: end,
+      headerLine: headerLine,
+      sepLine: sepLine,
+      colCount: colCount,
+      rowCount: end - start + 1,
+    };
+  }
+
+  /** Devuelve el índice de columna (0-based) en la posición `pos` para la
+   *  línea `lineNumber`. Si está fuera de cualquier celda → 0. */
+  function columnAtPos(state, lineNumber, pos) {
+    const ln = state.doc.line(lineNumber);
+    const relPos = Math.max(0, Math.min(ln.text.length, pos - ln.from));
+    const before = ln.text.slice(0, relPos);
+    // Cada | abre una nueva celda. La primera | es el borde, así que la
+    // primera celda real es entre la 1ª y la 2ª barra.
+    const bars = (before.match(/\|/g) || []).length;
+    return Math.max(0, bars - 1);
+  }
+
+  /** Split de una fila por `|`, descartando el primer y último elemento
+   *  (los bordes vacíos antes/después de la primera/última `|`). */
+  function splitCells(rowText) {
+    const trimmed = rowText.trim();
+    // Separamos por | sin perder los strings vacíos del medio.
+    const parts = trimmed.split('|');
+    // Si empieza con | y termina con |, el primer y último split son '' (los bordes).
+    if (parts.length >= 2 && parts[0].trim() === '') parts.shift();
+    if (parts.length >= 1 && parts[parts.length - 1].trim() === '') parts.pop();
+    return parts;
+  }
+
+  function buildRow(cells) {
+    return '| ' + cells.map(c => c.trim() || ' ').join(' | ') + ' |';
+  }
+
+  function buildSepRow(colCount) {
+    return '| ' + Array(colCount).fill('---').join(' | ') + ' |';
+  }
+
+  function emptyRow(colCount) {
+    return '| ' + Array(colCount).fill(' ').join(' | ') + ' |';
+  }
+
+  function tableOp(view, op) {
+    const st = view.state;
+    const sel = lastSelection || st.selection.main;
+    const cursorLineNumber = st.doc.lineAt(sel.from).number;
+    const tbl = detectTable(st, cursorLineNumber);
+    if (!tbl) return;
+
+    const targetCol = columnAtPos(st, cursorLineNumber, sel.from);
+
+    if (op === 'rowAbove' || op === 'rowBelow') {
+      // No permitimos insertar en la línea separadora.
+      let insertAfter = cursorLineNumber;
+      if (op === 'rowAbove') insertAfter = Math.max(tbl.headerLine, cursorLineNumber - 1);
+      if (insertAfter === tbl.headerLine && op === 'rowAbove') insertAfter = tbl.headerLine; // no podemos ir antes del header
+      const newRow = emptyRow(tbl.colCount);
+      // Inserciones: añadimos la nueva línea justo después de `insertAfter`.
+      // No insertamos antes del header.
+      const targetLineN = op === 'rowAbove'
+        ? Math.max(tbl.sepLine + 1, cursorLineNumber)    // arriba de la fila actual (no del header/sep)
+        : Math.max(tbl.sepLine, cursorLineNumber) + 1;    // debajo
+      const line = st.doc.line(Math.min(targetLineN, st.doc.lines));
+      // Si "targetLineN" supera el final del doc, añadimos al final del doc.
+      let from, insert;
+      if (op === 'rowBelow' && cursorLineNumber === tbl.endLine && tbl.endLine === st.doc.lines) {
+        // Última línea del documento: insert al final, sin línea previa.
+        from = st.doc.line(tbl.endLine).to;
+        insert = '\n' + newRow;
+      } else if (op === 'rowAbove') {
+        // Insertamos antes de la línea targetLineN: usamos el `from` de esa línea.
+        const realTarget = Math.max(tbl.sepLine + 1, cursorLineNumber);
+        const target = st.doc.line(realTarget);
+        from = target.from;
+        insert = newRow + '\n';
+      } else {
+        // rowBelow: insertamos después de cursorLineNumber (o sep si estamos sobre header).
+        const realTarget = (cursorLineNumber === tbl.headerLine) ? tbl.sepLine : cursorLineNumber;
+        const target = st.doc.line(realTarget);
+        from = target.to;
+        insert = '\n' + newRow;
+      }
+      view.dispatch({ changes: { from, to: from, insert }, scrollIntoView: true });
+      view.focus();
+      return;
+    }
+
+    if (op === 'colLeft' || op === 'colRight') {
+      const col = targetCol;
+      const insertIdx = op === 'colLeft' ? col : col + 1;
+      const changes = [];
+      for (let n = tbl.startLine; n <= tbl.endLine; n++) {
+        const ln = st.doc.line(n);
+        let cells;
+        if (n === tbl.sepLine) {
+          // separator: cells de '---'
+          cells = Array(tbl.colCount).fill('---');
+          cells.splice(insertIdx, 0, '---');
+          changes.push({ from: ln.from, to: ln.to, insert: '| ' + cells.join(' | ') + ' |' });
+        } else {
+          cells = splitCells(ln.text);
+          cells.splice(insertIdx, 0, ' ');
+          changes.push({ from: ln.from, to: ln.to, insert: buildRow(cells) });
+        }
+      }
+      view.dispatch({ changes, scrollIntoView: true });
+      view.focus();
+      return;
+    }
+
+    if (op === 'delRow') {
+      // No se puede eliminar header ni separador (rompería la tabla).
+      if (cursorLineNumber === tbl.headerLine || cursorLineNumber === tbl.sepLine) return;
+      if (tbl.rowCount <= 3) return;                    // header + sep + última fila → no borrar
+      const ln = st.doc.line(cursorLineNumber);
+      // Borramos la línea entera incluido su salto.
+      let from = ln.from, to = ln.to;
+      if (cursorLineNumber < st.doc.lines) to = to + 1;    // incluye '\n'
+      else from = Math.max(0, from - 1);                   // o el '\n' previo si es la última
+      view.dispatch({ changes: { from, to, insert: '' }, scrollIntoView: true });
+      view.focus();
+      return;
+    }
+
+    if (op === 'delCol') {
+      if (tbl.colCount <= 1) return;                    // dejaríamos una tabla degenerada
+      const col = targetCol;
+      const changes = [];
+      for (let n = tbl.startLine; n <= tbl.endLine; n++) {
+        const ln = st.doc.line(n);
+        if (n === tbl.sepLine) {
+          const cells = Array(tbl.colCount).fill('---');
+          cells.splice(col, 1);
+          changes.push({ from: ln.from, to: ln.to, insert: '| ' + cells.join(' | ') + ' |' });
+        } else {
+          const cells = splitCells(ln.text);
+          if (cells.length > col) cells.splice(col, 1);
+          changes.push({ from: ln.from, to: ln.to, insert: buildRow(cells) });
+        }
+      }
+      view.dispatch({ changes, scrollIntoView: true });
+      view.focus();
+      return;
+    }
+
+    if (op === 'delTable') {
+      if (!confirm('¿Eliminar toda la tabla?')) return;
+      const fromLine = st.doc.line(tbl.startLine);
+      const toLine = st.doc.line(tbl.endLine);
+      let from = fromLine.from, to = toLine.to;
+      if (toLine.number < st.doc.lines) to = to + 1;
+      else from = Math.max(0, from - 1);
+      view.dispatch({ changes: { from, to, insert: '' }, scrollIntoView: true });
+      view.focus();
+      return;
+    }
+  }
+
   function runOption(opt) {
     const view = getView(); if (!view) return;
     switch (opt.kind) {
-      case 'wrap':   applyWrap(view, opt.pre, opt.post, opt.placeholder); break;
-      case 'prefix': applyPrefix(view, opt.prefix); break;
-      case 'ol':     applyOrdered(view); break;
-      case 'block':  applyBlock(view, opt.snippet); break;
-      case 'link':   applyLink(view); break;
+      case 'wrap':     applyWrap(view, opt.pre, opt.post, opt.placeholder); break;
+      case 'prefix':   applyPrefix(view, opt.prefix); break;
+      case 'ol':       applyOrdered(view); break;
+      case 'block':    applyBlock(view, opt.snippet); break;
+      case 'link':     applyLink(view); break;
+      case 'table_op': tableOp(view, opt.op); break;
     }
   }
 
   // ── Menú DOM ──────────────────────────────────────────────────────────────
-  function buildMenu() {
-    if (menu) return menu;
-    menu = document.createElement('div');
-    menu.className = 'md-ctxmenu hidden';
-    menu.setAttribute('role', 'menu');
+  /** Construye (o reconstruye) el menú con la lista de opciones dada. */
+  function renderMenu(opts) {
+    if (!menu) {
+      menu = document.createElement('div');
+      menu.className = 'md-ctxmenu hidden';
+      menu.setAttribute('role', 'menu');
+      document.body.appendChild(menu);
+      menu.addEventListener('click', e => {
+        const btn = e.target.closest('.md-ctxmenu-item');
+        if (!btn) return;
+        const opt = menu._opts[parseInt(btn.dataset.idx, 10)];
+        closeMenu();
+        runOption(opt);
+      });
+    }
+    menu._opts = opts;
     let html = '';
-    OPTIONS.forEach((opt, idx) => {
+    opts.forEach((opt, idx) => {
       if (opt.sep) { html += '<div class="md-ctxmenu-sep"></div>'; return; }
-      html += `<button class="md-ctxmenu-item" role="menuitem" data-idx="${idx}">
+      const cls = 'md-ctxmenu-item' + (opt.danger ? ' md-ctxmenu-danger' : '');
+      html += `<button class="${cls}" role="menuitem" data-idx="${idx}">
         <span>${opt.label}</span>
         ${opt.kbd ? `<kbd>${opt.kbd}</kbd>` : ''}
       </button>`;
     });
     menu.innerHTML = html;
-    document.body.appendChild(menu);
-    menu.addEventListener('click', e => {
-      const btn = e.target.closest('.md-ctxmenu-item');
-      if (!btn) return;
-      const opt = OPTIONS[parseInt(btn.dataset.idx, 10)];
-      closeMenu();
-      runOption(opt);
-    });
     return menu;
   }
 
   function openMenu(x, y) {
-    const m = buildMenu();
     // Backup de la selección actual: si el usuario hace clic en el menú,
     // el editor pierde el foco y la selección colapsa.
     const view = getView();
@@ -167,6 +371,15 @@
       const s = view.state.selection.main;
       lastSelection = { from: s.from, to: s.to };
     }
+    // Si el cursor está en una tabla, ofrecemos primero las ops de tabla.
+    let opts = OPTIONS.slice();
+    if (view) {
+      const lineN = view.state.doc.lineAt(view.state.selection.main.from).number;
+      if (detectTable(view.state, lineN)) {
+        opts = TABLE_OPTIONS.concat(opts);
+      }
+    }
+    const m = renderMenu(opts);
     m.classList.remove('hidden');
     // Reposicionar para no salirse del viewport.
     const w = m.offsetWidth, h = m.offsetHeight;
@@ -191,6 +404,15 @@
     const dom = window.ED.dom;
     dom.addEventListener('contextmenu', e => {
       e.preventDefault();
+      // Mueve el cursor al punto del click antes de abrir el menú, para que
+      // las ops de tabla (insertar fila/columna) operen en la celda clicada.
+      const view = getView();
+      if (view && typeof view.posAtCoords === 'function') {
+        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+        if (pos != null) {
+          view.dispatch({ selection: { anchor: pos } });
+        }
+      }
       openMenu(e.clientX, e.clientY);
     });
     document.addEventListener('click', e => {
