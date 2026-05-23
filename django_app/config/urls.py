@@ -1,10 +1,21 @@
 """URL routing principal."""
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponseRedirect
 
 from apps.core import views as core_views
+
+
+class _Redirect307(HttpResponseRedirect):
+    """Redirect que conserva método HTTP y body (a diferencia del 302 default)."""
+    status_code = 307
+
+
+def _vault_to_notes(request, rest):
+    qs = ("?" + request.META["QUERY_STRING"]) if request.META.get("QUERY_STRING") else ""
+    return _Redirect307(f"/api/notes/{rest}{qs}")
 
 urlpatterns = [
     # Página raíz: login (si no autenticado) o redirect a /home/.
@@ -27,6 +38,9 @@ urlpatterns = [
 
     # APIs JSON por app.
     path("api/notes/",    include("apps.notes.api_urls")),
+    # Alias retro-compatible: redirige /api/vault/<x> -> /api/notes/<x>
+    # con 307 (conserva método y body para los POSTs cacheados por el SW).
+    re_path(r"^api/vault/(?P<rest>.*)$", _vault_to_notes),
     path("api/files/",    include("apps.files_app.api_urls")),
     path("api/videos/",   include("apps.videos.api_urls")),
     path("api/admin/",    include("apps.accounts.admin_urls")),
