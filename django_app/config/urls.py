@@ -25,10 +25,8 @@ urlpatterns = [
     path("files/", include("apps.files_app.urls")),
     # /push/ ya no expone URLs propias (las APIs viven en /api/push/).
 
-    # APIs JSON por app. La nomenclatura de las rutas la fija el frontend, así
-    # que mantenemos `vault` para notas (la app interna se llama notes pero la
-    # URL pública es /api/vault/ por compatibilidad histórica con el JS).
-    path("api/vault/",    include("apps.notes.api_urls")),
+    # APIs JSON por app.
+    path("api/notes/",    include("apps.notes.api_urls")),
     path("api/files/",    include("apps.files_app.api_urls")),
     path("api/videos/",   include("apps.videos.api_urls")),
     path("api/admin/",    include("apps.accounts.admin_urls")),

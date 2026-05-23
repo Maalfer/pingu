@@ -9,6 +9,7 @@ Group=www-data
 WorkingDirectory=/var/www/balusong/django_app
 EnvironmentFile=/var/www/balusong/django_app/.env
 Environment=HOME=/var/www/balusong
+Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
 ExecStart=/var/www/balusong/venv/bin/gunicorn \
     config.asgi:application \
     --worker-class uvicorn.workers.UvicornWorker \

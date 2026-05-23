@@ -1,8 +1,13 @@
-"""Pingu/BaluHome Django settings."""
+"""Settings base — comunes a todos los entornos.
+
+`dev` y `prod` heredan de aquí y sólo sobrescriben lo específico de cada entorno
+(DEBUG, ALLOWED_HOSTS, cookies seguras, HSTS, etc.).
+"""
 import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# config/settings/base.py → BASE_DIR = django_app/
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # .env loader minimalista (sin dependencias externas).
 ENV_FILE = BASE_DIR / ".env"
@@ -14,18 +19,17 @@ if ENV_FILE.exists():
         _k, _v = _line.split("=", 1)
         os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
-# ── Núcleo ────────────────────────────────────────────────────────────────────
+# ── Núcleo ───────────────────────────────────────────────────────────────────
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or "baluhome-dev-secret-CHANGE-ME"
-DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
 _hosts = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()]
-ALLOWED_HOSTS = _hosts or (["*"] if DEBUG else ["127.0.0.1", "localhost"])
+ALLOWED_HOSTS = _hosts or ["127.0.0.1", "localhost"]
 
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if h not in ("127.0.0.1", "localhost", "*")
 ] + ["http://127.0.0.1:8002", "http://localhost:8002"]
 
-# ── Apps / middleware ─────────────────────────────────────────────────────────
+# ── Apps / middleware ────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -81,8 +85,7 @@ TEMPLATES = [{
     },
 }]
 
-# ── BD ────────────────────────────────────────────────────────────────────────
-# MariaDB / MySQL — credenciales por variables de entorno (.env).
+# ── BD ───────────────────────────────────────────────────────────────────────
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -96,12 +99,12 @@ DATABASES = {
             # STRICT_TRANS_TABLES evita inserts silenciosos truncados.
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
         },
-        "CONN_MAX_AGE": 60,        # reusa la conexión 60 s entre requests
-        "CONN_HEALTH_CHECKS": True, # pinguea al reciclar
+        "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
+# ── Auth ─────────────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "/"
 LOGIN_REDIRECT_URL = "/home/"
@@ -118,13 +121,13 @@ PASSWORD_HASHERS = [
     "apps.accounts.hashers.BCryptLegacyHasher",
 ]
 
-# ── I18N ──────────────────────────────────────────────────────────────────────
+# ── I18N ─────────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = "es"
 TIME_ZONE = "Europe/Madrid"
 USE_I18N = True
 USE_TZ = True
 
-# ── Static / Media ────────────────────────────────────────────────────────────
+# ── Static / Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / "static_collected"))
@@ -136,31 +139,18 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Uploads: tope 1 GB. nginx debe ir alineado en client_max_body_size.
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MB en RAM; el resto va a disco temporal
-DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024 + 10 * 1024 * 1024  # 1 GB + holgura
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024 + 10 * 1024 * 1024
 
-# ── Sesiones / CSRF ───────────────────────────────────────────────────────────
+# ── Sesiones / CSRF ──────────────────────────────────────────────────────────
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = False  # Necesario para que JS lea el token y lo envíe vía header
+CSRF_COOKIE_HTTPONLY = False
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 
-# ── Seguridad HTTPS (sólo cuando no es DEBUG) ────────────────────────────────
-if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = False  # nginx ya redirige 80 → 443
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = False
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_REFERRER_POLICY = "same-origin"
-    X_FRAME_OPTIONS = "SAMEORIGIN"
-
-# ── Logging ───────────────────────────────────────────────────────────────────
+# ── Logging ──────────────────────────────────────────────────────────────────
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -176,8 +166,8 @@ LOGGING = {
     },
 }
 
-# ── Constantes app ────────────────────────────────────────────────────────────
-ASSET_VERSION = os.environ.get("ASSET_VERSION", "v107")
+# ── Constantes app ───────────────────────────────────────────────────────────
+ASSET_VERSION = os.environ.get("ASSET_VERSION", "v109")
 
 BALUHOME_DATA_ROOT = Path(os.environ.get("BALUHOME_DATA_ROOT", BASE_DIR / "data"))
 BALUHOME_VAULT_ROOT = Path(os.environ.get("BALUHOME_VAULT_ROOT", BALUHOME_DATA_ROOT / "vault"))

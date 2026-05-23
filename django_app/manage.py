@@ -6,7 +6,11 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    # En CLI (manage.py) por defecto cargamos los settings de desarrollo.
+    # En producción, gunicorn pasa DJANGO_SETTINGS_MODULE=config.settings.prod
+    # vía systemd. `config.settings` (sin variante) también resuelve a prod
+    # vía __init__.py por seguridad.
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

@@ -575,7 +575,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/marked.min.js?v={{ ASSET_VERSION }}"></script>
+<script src="/static/notes/marked.min.js?v={{ ASSET_VERSION }}"></script>
 <script src="/static/vendor/highlight.min.js?v={{ ASSET_VERSION }}"></script>
 <script src="/static/vendor/katex/katex.min.js?v={{ ASSET_VERSION }}"></script>
 <script src="/static/vendor/codemirror/balucm.js?v={{ ASSET_VERSION }}"></script>
@@ -605,7 +605,7 @@ function api(url, body) {
     body: JSON.stringify({...body, csrf_token: CSRF})}).then(r => r.json());
 }
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function assetUrl(path){return '/api/vault/asset?path=' + encodeURIComponent(path);}
+function assetUrl(path){return '/api/notes/asset?path=' + encodeURIComponent(path);}
 
 /* ════════════ Obsidian-flavored Markdown ════════════ */
 (function setupMarked(){
@@ -784,7 +784,7 @@ function resolveEmbed(el, depth){
     const titleTxt = section ? `${f.name} › ${section.replace(/^\^/,'')}` : f.name;
     el.innerHTML=`<div class="embed-title" data-open="${esc(f.path)}">▣ ${esc(titleTxt)}</div><div class="embed-body">Cargando…</div>`;
     el.querySelector('.embed-title').onclick=()=>openNote(f.path);
-    fetch('/api/vault/file?path='+encodeURIComponent(f.path)).then(r=>r.json()).then(res=>{
+    fetch('/api/notes/file?path='+encodeURIComponent(f.path)).then(r=>r.json()).then(res=>{
       const bodyEl=el.querySelector('.embed-body'); if(!bodyEl)return;
       const md = section && !section.startsWith('^') ? extractSection(res.content||'', section) : (res.content||'');
       bodyEl.innerHTML=renderMarkdown(md); postProcess(bodyEl, depth+1);
@@ -873,7 +873,7 @@ function buildTreeDOM(items, container, depth){
 }
 
 async function loadTree(){
-  const res=await fetch('/api/vault/tree').then(r=>r.json()).catch(()=>null);
+  const res=await fetch('/api/notes/tree').then(r=>r.json()).catch(()=>null);
   if(!res) return;
   TREE=res.tree; FLAT=[]; BY_PATH=new Map(); BY_BASE=new Map(); flatten(TREE);
   renderTree(); flashSync();
@@ -923,7 +923,7 @@ async function searchContent(q, namePaths){
   const seq=++searchSeq;
   const terms=q.split(/\s+/).filter(Boolean);
   let data=null;
-  try{ data=await fetch('/api/vault/search?q='+encodeURIComponent(q)).then(r=>r.json()); }catch(e){}
+  try{ data=await fetch('/api/notes/search?q='+encodeURIComponent(q)).then(r=>r.json()); }catch(e){}
   if(seq!==searchSeq) return;                       // ignora respuestas obsoletas
   const wrap=$('content-results'); if(!wrap) return;
   const extra=((data&&data.results)||[]).filter(r=>!namePaths.has(r.path));
@@ -952,7 +952,7 @@ async function openNote(path, terms, opts){
     if(dup >= 0){ return switchToTab(dup); }
   }
   if(dirty) await saveNow();
-  const res=await fetch('/api/vault/file?path='+encodeURIComponent(path)).then(r=>r.json());
+  const res=await fetch('/api/notes/file?path='+encodeURIComponent(path)).then(r=>r.json());
   if(res.error){ if(opts.silent) return false; alert(res.error); loadTree(); return false; }
   current={path:res.path, name:res.name, content:res.content}; dirty=false;
   $('vault-empty').style.display='none'; $('vault-toolbar').style.display='flex'; $('vault-body').style.display='flex';
@@ -1143,7 +1143,7 @@ function onEdit(){ dirty=true; setStatus('Editando…',false);
 async function saveNow(){
   if(!current||!dirty) return; clearTimeout(saveTimer);
   const content=(ED?ED.getValue():current.content).replace(/\n+$/, ''); current.content=content; dirty=false; setStatus('Guardando…',false);
-  const res=await api('/api/vault/save',{path:current.path, content});
+  const res=await api('/api/notes/save',{path:current.path, content});
   if(res.success) setStatus('Guardado', true); else { setStatus('Error al guardar',false); dirty=true; }
 }
 
@@ -1198,7 +1198,7 @@ function initEditor(){
       const f=findFileByName(name);
       if(f) openNote(f.path);
       else if(confirm(`La nota «${name}» no existe. ¿Crearla?`)){
-        const res=await api('/api/vault/create',{parent: current?current.path.split('/').slice(0,-1).join('/'):'', name, type:'note'});
+        const res=await api('/api/notes/create',{parent: current?current.path.split('/').slice(0,-1).join('/'):'', name, type:'note'});
         if(res.error) return alert(res.error); revealPath(res.path); await loadTree(); openNote(res.path); }
       return; }
     const tg=e.target.closest('.tag-pill');
@@ -1273,17 +1273,17 @@ function revealPath(path){ const parts=path.split('/'); let acc='';
   for(let i=0;i<parts.length-1;i++){ acc=acc?acc+'/'+parts[i]:parts[i]; expanded.add(acc); } persistExpanded(); }
 async function newNote(parent){
   const name=prompt('Nombre de la nota:','Nueva nota'); if(!name) return;
-  const res=await api('/api/vault/create',{parent: parent ?? currentFolderContext(), name, type:'note'});
+  const res=await api('/api/notes/create',{parent: parent ?? currentFolderContext(), name, type:'note'});
   if(res.error) return alert(res.error); revealPath(res.path); await loadTree(); openNote(res.path);
 }
 async function newFolder(parent){
   const name=prompt('Nombre de la carpeta:','Nueva carpeta'); if(!name) return;
-  const res=await api('/api/vault/create',{parent: parent ?? currentFolderContext(), name, type:'folder'});
+  const res=await api('/api/notes/create',{parent: parent ?? currentFolderContext(), name, type:'folder'});
   if(res.error) return alert(res.error); revealPath(res.path); expanded.add(res.path); persistExpanded(); await loadTree();
 }
 async function renameItem(it){
   const name=prompt('Nuevo nombre:', it.name); if(!name||name===it.name) return;
-  const res=await api('/api/vault/rename',{path:it.path, name}); if(res.error) return alert(res.error);
+  const res=await api('/api/notes/rename',{path:it.path, name}); if(res.error) return alert(res.error);
   const wasOpen=current&&current.path===it.path;
   // Reescribir rutas en pestañas y en sus historiales (renombrado de archivo o carpeta).
   const remap = p => (p===it.path || p.startsWith(it.path+'/')) ? res.path + p.slice(it.path.length) : p;
@@ -1294,7 +1294,7 @@ async function renameItem(it){
 async function deleteItem(it){
   const what=it.type==='folder'?'la carpeta y todo su contenido':(it.type==='note'?'la nota':'el archivo');
   if(!confirm(`¿Borrar ${what} «${it.name}»?`)) return;
-  const res=await api('/api/vault/delete',{path:it.path}); if(res.error) return alert(res.error);
+  const res=await api('/api/notes/delete',{path:it.path}); if(res.error) return alert(res.error);
   const isHit = p => p===it.path || p.startsWith(it.path+'/');
   // Limpiar el historial de cada pestaña; cerrar las pestañas cuya ruta actual quede afectada.
   for(let i=tabs.length-1;i>=0;i--){
@@ -1384,7 +1384,7 @@ function showImageCtxMenu(e, info){
 async function deleteImage(info){
   if(!info || !current) return;
   setStatus('Borrando imagen…', false);
-  const res=await api('/api/vault/delete',{path:info.path});
+  const res=await api('/api/notes/delete',{path:info.path});
   if(res && res.error){ alert(res.error); setStatus('Error al borrar', false); return; }
   if(ED) ED.set(stripImageRefs(ED.getValue(), info.name));
   dirty=true; await saveNow();
@@ -1398,7 +1398,7 @@ function insertIntoEditor(text){ if(ED){ ED.insert(text); onEdit(); } }
 function uploadAsset(file){
   const fd=new FormData(); fd.append('file', file, file.name||'image.png'); fd.append('csrf_token', CSRF);
   fd.append('dir', localStorage.getItem('vault-img-dir')||'');   // carpeta elegida (vacío = automático)
-  return fetch('/api/vault/upload-asset',{method:'POST', body:fd}).then(r=>r.json());
+  return fetch('/api/notes/upload-asset',{method:'POST', body:fd}).then(r=>r.json());
 }
 /* ════════════ Selector de carpeta para imágenes ════════════ */
 function collectFolders(items, acc){ (items||[]).forEach(it=>{ if(it.type==='folder'){ acc.push(it.path); collectFolders(it.children, acc); } }); return acc; }
@@ -1462,7 +1462,7 @@ document.addEventListener('click', e=>{
 updateZoomLabel();
 
 /* ════════════ Export / Import ════════════ */
-$('btn-export').addEventListener('click', ()=>{ if(dirty) saveNow(); window.location='/api/vault/export'; });
+$('btn-export').addEventListener('click', ()=>{ if(dirty) saveNow(); window.location='/api/notes/export'; });
 let importFile=null;
 function openImport(){ importFile=null; $('import-fname').style.display='none'; $('import-go').disabled=true;
   $('import-file').value=''; $('import-modal').classList.add('show'); }
@@ -1490,7 +1490,7 @@ $('import-go').addEventListener('click', ()=>{
   const fd=new FormData(); fd.append('file', importFile);
   fd.append('mode', document.querySelector('input[name=impmode]:checked').value); fd.append('csrf_token', CSRF);
   const xhr=new XMLHttpRequest();
-  xhr.open('POST', UPLOAD_BASE+'/api/vault/import');
+  xhr.open('POST', UPLOAD_BASE+'/api/notes/import');
   xhr.withCredentials=true;   // envía la cookie de sesión al subdominio uploads.
   xhr.upload.onprogress=e=>{ if(e.lengthComputable){ const p=Math.round(e.loaded/e.total*100);
     fill.style.width=p+'%'; btn.textContent=(p<100?'Subiendo '+p+'%':'Procesando…'); } };
@@ -1539,7 +1539,7 @@ function closeVaultSettingsMenu() {
 }
 $('btn-img-dir').addEventListener('click', toggleVaultSettingsMenu);
 $('vsm-imgdir').addEventListener('click', () => { closeVaultSettingsMenu(); openImgDirModal(); });
-$('vsm-export').addEventListener('click', () => { closeVaultSettingsMenu(); if(dirty) saveNow(); window.location='/api/vault/export'; });
+$('vsm-export').addEventListener('click', () => { closeVaultSettingsMenu(); if(dirty) saveNow(); window.location='/api/notes/export'; });
 $('vsm-import').addEventListener('click', () => { closeVaultSettingsMenu(); openImport(); });
 document.addEventListener('click', e => {
   if (!$('vault-settings-wrap').contains(e.target)) closeVaultSettingsMenu();
