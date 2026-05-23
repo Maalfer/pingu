@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
@@ -18,9 +18,9 @@ from .models import User, InviteToken, ActivityLog
 
 log = logging.getLogger(__name__)
 
-
-def _is_admin(u):
-    return u.is_authenticated and getattr(u, "role", None) == "admin"
+# admin_only es el equivalente Django-canónico de "sólo si role == admin".
+# `User.save()` mantiene is_staff sincronizado con role.
+admin_only = staff_member_required(login_url="/")
 
 
 def _log(user, action, detail=""):
@@ -31,7 +31,7 @@ def _err(msg, status=400):
     return JsonResponse({"error": msg}, status=status)
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_POST
 def delete_user(request):
     data = json.loads(request.body or "{}")
@@ -56,7 +56,7 @@ def delete_user(request):
     return JsonResponse({"success": True})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_POST
 def change_user_password(request):
     data = json.loads(request.body or "{}")
@@ -75,7 +75,7 @@ def change_user_password(request):
     return JsonResponse({"success": True})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_POST
 def change_user_username(request):
     data = json.loads(request.body or "{}")
@@ -96,7 +96,7 @@ def change_user_username(request):
     return JsonResponse({"success": True, "new_username": new_username})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_POST
 def change_user_role(request):
     data = json.loads(request.body or "{}")
@@ -115,7 +115,7 @@ def change_user_role(request):
     return JsonResponse({"success": True})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_POST
 def create_invite(request):
     token = secrets.token_hex(24)
@@ -126,7 +126,7 @@ def create_invite(request):
     return JsonResponse({"success": True, "link": link, "token": token})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_POST
 def create_user(request):
     data = json.loads(request.body or "{}")
@@ -150,7 +150,7 @@ def create_user(request):
     return JsonResponse({"success": True, "id": u.id, "username": username, "role": role})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_GET
 def disk_usage(request):
     total = used = 0
@@ -170,7 +170,7 @@ def disk_usage(request):
     return JsonResponse({"vps_total": total, "vps_used": used, "app_used": app_used})
 
 
-@user_passes_test(_is_admin, login_url="/")
+@admin_only
 @require_GET
 def activity(request):
     rows = ActivityLog.objects.order_by("-created_at")[:100].values(

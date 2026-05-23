@@ -36,6 +36,17 @@ class User(AbstractUser):
     def is_admin(self) -> bool:
         return self.role == "admin"
 
+    def save(self, *args, **kwargs):
+        # role == 'admin' ⇒ is_staff + is_superuser. Esto permite usar los
+        # decoradores nativos de Django (@staff_member_required, @permission_required)
+        # y, de paso, abrir el Django admin nativo para los admins.
+        is_admin = (self.role == "admin")
+        if self.is_staff != is_admin:
+            self.is_staff = is_admin
+        if self.is_superuser != is_admin:
+            self.is_superuser = is_admin
+        super().save(*args, **kwargs)
+
 
 class InviteToken(models.Model):
     """Token de invitación para registrar nuevos usuarios."""

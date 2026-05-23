@@ -1414,7 +1414,9 @@ body.has-player.chat-app-body .chat-input-area { padding-bottom: calc(var(--play
   width: 100%;
   max-width: 580px;
   margin: 0 auto;
-  padding: 0 1.25rem 3rem;
+  /* padding bottom amplio + safe-area: deja respirar al último elemento
+     respecto a la barra del navegador móvil y/o al mini-player de música. */
+  padding: 0 1.25rem calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
 .home-header {
@@ -2102,8 +2104,8 @@ body.has-player.chat-app-body .chat-input-area { padding-bottom: calc(var(--play
 
 /* ── CHAT LAYOUT ── */
 .chat-app-body {
-  height: 100dvh;
-  height: 100vh;
+  height: 100vh;   /* fallback */
+  height: 100dvh;  /* viewport dinámico móvil */
   overflow: hidden;
 }
 /* .chat-wrapper ya está en flex-column (heredado de .subapp-wrapper) y toma el
@@ -2432,7 +2434,7 @@ body.has-player.chat-app-body .chat-input-area { padding-bottom: calc(var(--play
 /* ── RESPONSIVE ── */
 @media (min-width: 768px) {
   .subapp-content { padding: 1.5rem 2rem; }
-  .home-wrapper { padding: 0 2rem 3rem; }
+  .home-wrapper { padding: 0 2rem calc(6rem + env(safe-area-inset-bottom, 0px)); }
   .chat-messages { padding: 1.25rem 2rem; }
   .chat-input-area { padding: .875rem 2rem; }
   .gastos-input-area { padding: .875rem 2rem; }
@@ -3378,8 +3380,8 @@ button, a { touch-action: manipulation; }
 
 /* ── SHOP/TODO: input fijo en la parte inferior ── */
 .subapp-body-shop {
-  height: 100dvh;
-  height: 100vh; /* fallback */
+  height: 100vh;          /* fallback navegadores viejos */
+  height: 100dvh;         /* viewport dinámico: se ajusta cuando aparece/oculta la barra del móvil */
   overflow: hidden;
   /* body sigue siendo flex column (heredado de .subapp-body): header fuera del wrapper */
 }
@@ -5427,3 +5429,28 @@ body:not(.on-music) .player-fullscreen {
   width: 12px; height: 12px; border-radius: 50%;
   background: #fff; cursor: pointer;
 }
+
+/* ============================================================
+   Fixes globales: overflow horizontal, padding inferior, tema
+   ============================================================ */
+html, body {
+  /* Evita la franja oscura/scroll horizontal causado por margins negativos,
+     anchos hard-coded o shadows que se salen del viewport. */
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Padding extra en .subapp-content fuera de las apps con add-form fijo,
+   para que el último item nunca quede pegado a la barra del navegador móvil. */
+body.subapp-body:not(.subapp-body-shop):not(.chat-app-body) .subapp-content {
+  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Mini-player: tomar los colores del tema activo en lugar de hard-codear. */
+.player-bar { background: var(--bg2); border-top: 1px solid var(--border); }
+.player-title { color: var(--text); }
+.player-artist { color: var(--text2); }
+.player-btn { color: var(--text); }
+.player-btn:hover { background: var(--bg3); }
+.player-btn-play { background: var(--cyan); color: #000; }
+.player-btn-play:hover { background: var(--cyan-hover, var(--cyan)); }

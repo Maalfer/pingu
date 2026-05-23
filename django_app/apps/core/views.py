@@ -1,6 +1,7 @@
 """Vistas core: root (login redirect), home dashboard, service worker, manifest, admin panel."""
 from django.conf import settings
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
@@ -133,11 +134,7 @@ def manifest(request):
     })
 
 
-def _is_admin(u):
-    return u.is_authenticated and getattr(u, "role", None) == "admin"
-
-
-@user_passes_test(_is_admin, login_url="/")
+@staff_member_required(login_url="/")
 def admin_panel(request):
     users = User.objects.all().order_by("-date_joined")
     invites = InviteToken.objects.filter(is_used=False).order_by("-created_at")[:50]

@@ -46,7 +46,11 @@ def stream(request, song_id):
 @login_required
 @require_POST
 def download(request):
-    """Descarga audio de YouTube usando yt-dlp."""
+    """Descarga audio de YouTube usando yt-dlp.
+
+    Archivos: `<BALUHOME_UPLOADS_ROOT>/songs/<user_id>_<youtube_id>.mp3`
+    (mismo patrón que se venía usando históricamente — aísla colecciones por usuario).
+    """
     data = json.loads(request.body or "{}")
     url = (data.get("url") or "").strip()
     if not url or ("youtube.com" not in url and "youtu.be" not in url):
@@ -55,23 +59,36 @@ def download(request):
         import yt_dlp
     except ImportError:
         return JsonResponse({"error": "yt-dlp no instalado"}, status=500)
+
+    # Extracción previa (sin descargar) para obtener el id y poder reutilizar
+    # archivos ya descargados por el mismo usuario.
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True}) as probe:
+            info = probe.extract_info(url, download=False)
+    except Exception as exc:
+        return JsonResponse({"error": f"No se pudo leer el vídeo: {exc}"}, status=400)
+    yid = info.get("id")
+    if not yid:
+        return JsonResponse({"error": "No se pudo identificar el vídeo"}, status=400)
+    if Song.objects.filter(user=request.user, youtube_id=yid).exists():
+        return JsonResponse({"error": "Esta canción ya está en tu biblioteca"}, status=400)
+
     out_dir = settings.BALUHOME_UPLOADS_ROOT / "songs"
     out_dir.mkdir(parents=True, exist_ok=True)
+    stem = f"{request.user.id}_{yid}"
     opts = {
         "format": "bestaudio/best",
-        "outtmpl": str(out_dir / "%(id)s.%(ext)s"),
+        "outtmpl": str(out_dir / f"{stem}.%(ext)s"),
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
         "quiet": True, "no_warnings": True,
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
-    except Exception as e:
-        return JsonResponse({"error": f"Error al descargar: {e}"}, status=500)
-    yid = info.get("id")
-    if Song.objects.filter(youtube_id=yid).exists():
-        return JsonResponse({"error": "Esta canción ya está en tu biblioteca"}, status=400)
-    file_path = str(out_dir / f"{yid}.mp3")
+    except Exception as exc:
+        return JsonResponse({"error": f"Error al descargar: {exc}"}, status=500)
+
+    file_path = str(out_dir / f"{stem}.mp3")
     s = Song.objects.create(
         user=request.user,
         title=info.get("title", "Unknown"),
