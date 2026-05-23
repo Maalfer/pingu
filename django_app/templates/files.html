@@ -242,8 +242,14 @@ function attachCardHandlers(card) {
   card.addEventListener('touchcancel', () => { clearTimeout(pressTimer); pressTimer = null; });
   card.addEventListener('click', e => {
     if (longFired) { e.preventDefault(); return; }
-    if (isFolder) loadFolder(id);
-    else window.location.href = '/api/files/download/' + id;
+    if (isFolder) { loadFolder(id); return; }
+    const mime = (item.mime_type || '').toLowerCase();
+    if (mime.startsWith('video/') && window.BHVideoPlayer) {
+      BHVideoPlayer.open({ src: '/api/files/view/' + id, title: item.name });
+      return;
+    }
+    // Por defecto: descarga (audio, pdf, imágenes, etc. siguen este camino).
+    window.location.href = '/api/files/download/' + id;
   });
 }
 
@@ -279,7 +285,14 @@ document.getElementById('ctx-menu').addEventListener('click', async e => {
   closeCtxMenu();
   if (action === 'open') {
     if (ctxItem.is_folder) loadFolder(ctxItem.id);
-    else window.location.href = '/api/files/download/' + ctxItem.id;
+    else {
+      const mime = (ctxItem.mime_type || '').toLowerCase();
+      if (mime.startsWith('video/') && window.BHVideoPlayer) {
+        BHVideoPlayer.open({ src: '/api/files/view/' + ctxItem.id, title: ctxItem.name });
+      } else {
+        window.location.href = '/api/files/download/' + ctxItem.id;
+      }
+    }
   } else if (action === 'download') window.location.href = '/api/files/download/' + ctxItem.id;
   else if (action === 'rename') openName('rename', ctxItem);
   else if (action === 'color') openColor(ctxItem);

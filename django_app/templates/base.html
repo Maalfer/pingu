@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="/static/css/app.css?v={{ ASSET_VERSION }}">
 {% block extra_head %}{% endblock %}
 </head>
-<body class="{% block body_class %}subapp-body{% endblock %}">
+<body class="{% block body_class %}subapp-body{% endblock %}{% if is_music_app %} on-music{% endif %}">
 <script>
 /* CSRF global: añade X-CSRFToken a todas las llamadas fetch() same-origin no seguras.
    Evita repetir el header en cada template y arregla los 403 de fetch JSON/FormData. */
@@ -198,6 +198,9 @@
 <audio id="audio-player" preload="metadata"></audio>
 <script>window.APP = window.APP || { csrf: "{{ csrf_token|default:'' }}", userId: {{ user_id|default:'null' }} };</script>
 <script src="/static/js/player.js?v={{ ASSET_VERSION }}"></script>
+
+{% include "_video_player.html" %}
+<script src="/static/js/video-player.js?v={{ ASSET_VERSION }}"></script>
 {% endif %}
 
 {% block body_end %}{% endblock %}

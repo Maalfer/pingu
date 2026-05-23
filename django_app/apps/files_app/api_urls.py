@@ -12,4 +12,5 @@ urlpatterns = [
     path("move", views.api_move, name="move"),
     path("delete", views.api_delete, name="delete"),
     path("download/<int:file_id>", views.api_download, name="download"),
+    path("view/<int:file_id>", views.api_view, name="view"),
 ]

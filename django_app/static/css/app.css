@@ -5329,3 +5329,101 @@ body.home-body { overflow-x: hidden; }
 .upload-row-error .upload-row-bar-fill { background: #ef4444; }
 .upload-row-error .upload-row-status { color: #ef4444; }
 .upload-row-error .upload-row-meta { color: #ef4444; }
+
+/* Mini-player de música: solo visible en /music/*. El <audio> sigue activo
+   en cualquier página, así que la canción no se pausa al navegar. */
+body:not(.on-music) .player-bar,
+body:not(.on-music) .player-fullscreen {
+  display: none !important;
+}
+
+/* ============================================================
+   BHVideoPlayer — reproductor reutilizable (files/, videos/)
+   ============================================================ */
+.bh-player-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: #000;
+  display: flex; flex-direction: column;
+}
+.bh-player-overlay.hidden { display: none; }
+.bh-player-video-wrap {
+  flex: 1; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+#bhvp-video {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+  background: #000;
+}
+.bh-player-controls {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: linear-gradient(to bottom,
+    rgba(0,0,0,.5) 0%, transparent 20%, transparent 60%, rgba(0,0,0,.85) 100%);
+  transition: opacity .3s;
+}
+.bh-player-controls.bh-player-hide { opacity: 0; pointer-events: none; }
+.bh-player-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; padding: .875rem 1rem; gap: .75rem;
+  padding-top: calc(.875rem + env(safe-area-inset-top, 0px));
+}
+.bh-player-icon-btn {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.12); border: 0; border-radius: 50%;
+  color: #fff; cursor: pointer; flex-shrink: 0;
+  transition: background .15s;
+}
+.bh-player-icon-btn:hover { background: rgba(255,255,255,.25); }
+.bh-player-icon-btn svg { width: 22px; height: 22px; }
+.bh-player-title {
+  color: #fff; font-size: .95rem; font-weight: 600;
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bh-player-bottom {
+  padding: .75rem 1rem 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+.bh-player-progress {
+  display: flex; align-items: center; gap: .75rem; margin-bottom: .625rem;
+}
+.bh-player-time {
+  color: rgba(255,255,255,.85);
+  font-size: .78rem; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.bh-player-seek {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,.25); outline: 0; cursor: pointer;
+}
+.bh-player-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--cyan, #06b6d4); cursor: pointer;
+  box-shadow: 0 0 6px rgba(0,212,232,.6);
+}
+.bh-player-buttons {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.bh-player-ctrl {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; color: #fff;
+  cursor: pointer; border-radius: 50%;
+  transition: background .15s;
+}
+.bh-player-ctrl:hover { background: rgba(255,255,255,.12); }
+.bh-player-ctrl svg { width: 24px; height: 24px; }
+.bh-player-playpause svg { width: 30px; height: 30px; }
+.bh-player-vol { display: flex; align-items: center; gap: .4rem; }
+.bh-player-vol-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 70px; height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,.3); outline: 0; cursor: pointer;
+}
+.bh-player-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; cursor: pointer;
+}

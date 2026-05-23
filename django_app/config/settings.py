@@ -167,7 +167,7 @@ LOGGING = {
 }
 
 # ── Constantes app ────────────────────────────────────────────────────────────
-ASSET_VERSION = os.environ.get("ASSET_VERSION", "v104")
+ASSET_VERSION = os.environ.get("ASSET_VERSION", "v105")
 
 BALUHOME_DATA_ROOT = Path(os.environ.get("BALUHOME_DATA_ROOT", BASE_DIR / "data"))
 BALUHOME_VAULT_ROOT = Path(os.environ.get("BALUHOME_VAULT_ROOT", BALUHOME_DATA_ROOT / "vault"))

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
-from django.http import Http404, JsonResponse, StreamingHttpResponse
+from django.http import FileResponse, Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
@@ -298,15 +298,21 @@ def api_delete(request):
     return JsonResponse({"success": True})
 
 
-@login_required
-@require_GET
-def api_download(request, file_id):
+def _node_for_serve(request, file_id) -> tuple[FileNode, Path]:
     node = FileNode.objects.filter(pk=file_id, user=request.user, is_folder=False).first()
     if not node or not node.storage_path:
         raise Http404("No encontrado")
     path = Path(node.storage_path)
     if not path.exists():
         raise Http404("Archivo no encontrado en disco")
+    return node, path
+
+
+@login_required
+@require_GET
+def api_download(request, file_id):
+    """Descarga forzada (`attachment`). Sin Range, suficiente para descargas."""
+    node, path = _node_for_serve(request, file_id)
     quoted = urllib.parse.quote(node.name)
 
     def iterfile():
@@ -323,4 +329,23 @@ def api_download(request, file_id):
     )
     resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quoted}"
     resp["Content-Length"] = str(path.stat().st_size)
+    return resp
+
+
+@login_required
+@require_GET
+def api_view(request, file_id):
+    """Sirve el archivo `inline` con soporte de Range para reproducción/seeking.
+
+    Usado por el reproductor de video/audio del frontend. `FileResponse` añade
+    Accept-Ranges y maneja peticiones parciales transparentemente.
+    """
+    node, path = _node_for_serve(request, file_id)
+    resp = FileResponse(
+        open(path, "rb"),
+        content_type=node.mime_type or "application/octet-stream",
+        as_attachment=False,
+        filename=node.name,
+    )
+    resp["Accept-Ranges"] = "bytes"
     return resp
