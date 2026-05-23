@@ -5461,3 +5461,55 @@ body.subapp-body:not(.subapp-body-shop):not(.chat-app-body) .subapp-content {
 .btn-cache-clear:hover { background: var(--bg4); color: var(--cyan); }
 .btn-cache-clear:disabled { opacity: .6; cursor: wait; }
 .btn-cache-clear .spinner { margin: 0; }
+
+/* ============================================================
+   Menú contextual Markdown (clic derecho en /notes/)
+   ============================================================ */
+.md-ctxmenu {
+  position: fixed;
+  z-index: 10001;
+  min-width: 220px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.4);
+  padding: 6px;
+  font-size: .9rem;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.md-ctxmenu.hidden { display: none; }
+.md-ctxmenu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.md-ctxmenu-item:hover,
+.md-ctxmenu-item:focus-visible {
+  background: var(--bg3);
+  outline: none;
+}
+.md-ctxmenu-item kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .75rem;
+  color: var(--text3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.md-ctxmenu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
