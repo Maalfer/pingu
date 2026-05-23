@@ -16,6 +16,14 @@
 (function () {
   'use strict';
 
+  // Opciones específicas cuando el cursor está sobre una línea con embed de
+  // imagen (wikilink `![[…]]`, markdown `![alt](path)` o `<img src="…">`).
+  const IMAGE_OPTIONS = [
+    { key: 'img_delete_full',   label: 'Eliminar imagen',           kind: 'image_op', op: 'delete_full',   danger: true },
+    { key: 'img_remove_ref',    label: 'Quitar referencia (sin borrar archivo)', kind: 'image_op', op: 'remove_ref' },
+    { sep: true },
+  ];
+
   // Opciones específicas de tabla: se anteponen al menú estándar cuando el
   // cursor está dentro de una tabla markdown.
   const TABLE_OPTIONS = [
@@ -331,6 +339,107 @@
     }
   }
 
+  // ── Detección / borrado de imágenes ─────────────────────────────────────
+  // Cubre: ![[ruta o nombre.ext]]  ·  ![alt](ruta.ext)  ·  <img src="ruta.ext">
+  const IMAGE_LINE_RE =
+    /!\[\[([^\]|#]+)(?:\|[^\]]*)?\]\]|!\[[^\]]*\]\(([^)\s]+)\)|<img\s[^>]*src=["']([^"']+)["']/i;
+
+  function detectImageInLine(state, lineNumber) {
+    const ln = state.doc.line(lineNumber);
+    const m = IMAGE_LINE_RE.exec(ln.text);
+    if (!m) return null;
+    const ref = m[1] || m[2] || m[3] || '';
+    return {
+      line: lineNumber,
+      ref: ref.trim(),
+      matched: m[0],
+      from: ln.from + m.index,
+      to: ln.from + m.index + m[0].length,
+    };
+  }
+
+  /** Resuelve la referencia del embed a un path real del vault.
+   *  Estrategias en orden:
+   *    1. Tal cual (si el embed ya usa el path completo Adjuntos/foo.webp).
+   *    2. Por nombre exacto (window.BY_BASE/BY_PATH del propio notes.html).
+   */
+  function resolveImagePath(ref) {
+    if (!ref) return null;
+    const trimmed = ref.replace(/^\.?\//, '');
+    // 1) Intento directo
+    if (window.BY_PATH && window.BY_PATH.get(trimmed.toLowerCase())) {
+      return window.BY_PATH.get(trimmed.toLowerCase()).path;
+    }
+    // 2) Por basename (último segmento, sin extensión y con extensión)
+    const base = trimmed.split('/').pop();
+    if (window.BY_BASE) {
+      const hit = window.BY_BASE.get(base.toLowerCase())
+               || window.BY_BASE.get(base.replace(/\.[^.]+$/, '').toLowerCase());
+      if (hit) return hit.path;
+    }
+    return trimmed;  // último recurso: pasamos lo que tenemos
+  }
+
+  async function imageOp(view, op) {
+    const st = view.state;
+    const sel = lastSelection || st.selection.main;
+    const lineN = st.doc.lineAt(sel.from).number;
+    const info = detectImageInLine(st, lineN);
+    if (!info) return;
+
+    // Si la línea SOLO contiene la referencia (con espacios), borramos la
+    // línea entera; si tiene más texto alrededor, sólo borramos el embed.
+    const lineText = st.doc.line(info.line).text;
+    const onlyEmbed = lineText.trim() === info.matched.trim();
+
+    if (op === 'remove_ref') {
+      let from = info.from, to = info.to;
+      if (onlyEmbed) {
+        const ln = st.doc.line(info.line);
+        from = ln.from;
+        to = ln.to + (info.line < st.doc.lines ? 1 : 0);   // incluir '\n'
+      }
+      view.dispatch({ changes: { from, to, insert: '' }, scrollIntoView: true });
+      view.focus();
+      return;
+    }
+
+    if (op === 'delete_full') {
+      if (!confirm('¿Eliminar definitivamente la imagen "' + info.ref + '"?\n\nSe borrará el archivo del disco y la referencia en esta nota.')) return;
+      const path = resolveImagePath(info.ref);
+      // Intentamos borrar el archivo en el servidor primero. Si falla,
+      // informamos y NO tocamos el editor.
+      try {
+        const r = await fetch('/api/notes/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok || data.error) {
+          alert('No se pudo borrar el archivo: ' + (data.error || 'error desconocido'));
+          return;
+        }
+      } catch (e) {
+        alert('Error de red al borrar el archivo: ' + e.message);
+        return;
+      }
+      // Ahora sí, quitar la referencia del editor.
+      let from = info.from, to = info.to;
+      if (onlyEmbed) {
+        const ln = st.doc.line(info.line);
+        from = ln.from;
+        to = ln.to + (info.line < st.doc.lines ? 1 : 0);
+      }
+      view.dispatch({ changes: { from, to, insert: '' }, scrollIntoView: true });
+      view.focus();
+      // Refrescar el árbol si el frontend expone esa función.
+      if (typeof window.loadTree === 'function') {
+        try { await window.loadTree(); } catch (_) {}
+      }
+    }
+  }
+
   function runOption(opt) {
     const view = getView(); if (!view) return;
     switch (opt.kind) {
@@ -340,6 +449,7 @@
       case 'block':    applyBlock(view, opt.snippet); break;
       case 'link':     applyLink(view); break;
       case 'table_op': tableOp(view, opt.op); break;
+      case 'image_op': imageOp(view, opt.op); break;
     }
   }
 
@@ -381,12 +491,16 @@
       const s = view.state.selection.main;
       lastSelection = { from: s.from, to: s.to };
     }
-    // Si el cursor está en una tabla, ofrecemos primero las ops de tabla.
+    // Anteponemos opciones contextuales (imagen / tabla) si la línea actual
+    // está sobre un embed de imagen o dentro de una tabla.
     let opts = OPTIONS.slice();
     if (view) {
       const lineN = view.state.doc.lineAt(view.state.selection.main.from).number;
       if (detectTable(view.state, lineN)) {
         opts = TABLE_OPTIONS.concat(opts);
+      }
+      if (detectImageInLine(view.state, lineN)) {
+        opts = IMAGE_OPTIONS.concat(opts);
       }
     }
     const m = renderMenu(opts);
@@ -415,13 +529,23 @@
     dom.addEventListener('contextmenu', e => {
       e.preventDefault();
       // Mueve el cursor al punto del click antes de abrir el menú, para que
-      // las ops de tabla (insertar fila/columna) operen en la celda clicada.
+      // las ops contextuales (tabla, imagen) operen sobre el elemento exacto.
       const view = getView();
       if (view && typeof view.posAtCoords === 'function') {
-        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-        if (pos != null) {
-          view.dispatch({ selection: { anchor: pos } });
+        let pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+        // Si el click fue sobre un <img> renderizado en Live Preview,
+        // posAtCoords puede devolver null o un punto a la izquierda del bloque.
+        // Caso fallback: buscamos el bloque .cm-lp-block que contiene la img
+        // y posicionamos el cursor al inicio de ese bloque.
+        if (pos == null) {
+          const img = e.target && e.target.closest('img');
+          const block = img && img.closest('.cm-lp-block');
+          if (block) {
+            const rect = block.getBoundingClientRect();
+            pos = view.posAtCoords({ x: rect.left + 4, y: rect.top + 4 });
+          }
         }
+        if (pos != null) view.dispatch({ selection: { anchor: pos } });
       }
       openMenu(e.clientX, e.clientY);
     });

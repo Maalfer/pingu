@@ -5817,3 +5817,47 @@ body.subapp-body:not(.subapp-body-shop):not(.chat-app-body) .subapp-content {
 :root:is([data-theme="light"], [data-theme="aqua"], [data-theme="pink"]) .storage-card-icon {
   background: rgba(0,0,0,.04);
 }
+
+/* Checkbox dentro del modal de Almacenamiento */
+.storage-check {
+  display: flex; align-items: flex-start; gap: .65rem;
+  cursor: pointer; user-select: none;
+  padding: .6rem .75rem;
+  border-radius: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  transition: border-color .15s, background .15s;
+}
+.storage-check:hover { border-color: var(--storage-c-images); background: var(--bg4); }
+.storage-check input[type="checkbox"] { display: none; }
+.storage-check-box {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  border: 2px solid var(--text3);
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, border-color .15s, transform .12s;
+}
+.storage-check-box svg {
+  width: 14px; height: 14px;
+  color: #000;
+  opacity: 0;
+  transform: scale(.5);
+  transition: opacity .12s, transform .12s;
+}
+.storage-check input:checked + .storage-check-box {
+  background: var(--storage-c-images);
+  border-color: var(--storage-c-images);
+}
+.storage-check input:checked + .storage-check-box svg { opacity: 1; transform: none; }
+.storage-check input:focus-visible + .storage-check-box {
+  box-shadow: 0 0 0 3px rgba(6,182,212,.25);
+}
+.storage-check-label {
+  color: var(--text); font-size: .85rem; font-weight: 600; line-height: 1.3;
+  display: flex; flex-direction: column; gap: .15rem; min-width: 0;
+}
+.storage-check-label small {
+  color: var(--text3); font-size: .75rem; font-weight: 400;
+}
