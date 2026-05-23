@@ -36,3 +36,6 @@ _*-backup-*/
 # ── OS ──────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# User avatars (PII)
+/avatars/
