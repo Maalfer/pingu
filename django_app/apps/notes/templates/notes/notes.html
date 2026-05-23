@@ -990,8 +990,18 @@ function hitRow(it, snippetHtml, terms){
   const ico=it.type==='note'?iconNote:(IMG_EXT.includes(it.ext)?iconImg:iconFile);
   const dir=it.path.split('/').slice(0,-1).join('/');
   const sub=snippetHtml?`<span class="hit-snippet">${snippetHtml}</span>`:(dir?`<span class="hit-path">${esc(dir)}</span>`:'');
-  row.innerHTML=`${ico}<span class="hit-text"><span class="label">${esc(it.name)}</span>${sub}</span>`;
-  row.addEventListener('click', ()=>{ if(it.type==='note') openNote(it.path, terms); else window.open(assetUrl(it.path),'_blank'); });
+  // Mismo botón de "tres puntos" que en el árbol normal, para poder borrar /
+  // imprimir / etc. desde los resultados de búsqueda.
+  row.innerHTML=`${ico}<span class="hit-text"><span class="label">${esc(it.name)}</span>${sub}</span><button class="row-menu">${iconDots}</button>`;
+  row.addEventListener('click', e=>{
+    if(e.target.closest('.row-menu')) return;
+    if(it.type==='note') openNote(it.path, terms);
+    else window.open(assetUrl(it.path),'_blank');
+  });
+  row.querySelector('.row-menu').addEventListener('click', e=>{
+    e.stopPropagation();
+    showCtxMenu(e, it);
+  });
   return row;
 }
 function hlTerms(text, terms){ let h=esc(text);
