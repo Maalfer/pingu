@@ -375,14 +375,18 @@ document.getElementById('file-input').addEventListener('change', async e => {
   uploadTray.classList.remove('hidden');
 
   const parentAtStart = currentParent;
-  let anyOk = false;
+  let ok = 0, err = 0;
   for (const file of files) {
     const r = await uploadOne(file, parentAtStart);
-    if (r.ok) anyOk = true;
+    if (r.ok) ok++; else err++;
   }
-  uploadTitle.textContent = 'Subida completada';
-  if (anyOk && currentParent === parentAtStart) loadFolder(currentParent);
-  setTimeout(() => uploadTray.classList.add('hidden'), 4000);
+  uploadTitle.textContent = err
+    ? `Completado · ${ok} OK · ${err} con error`
+    : `Subida completada (${ok})`;
+  // Refrescar listado si seguimos en la misma carpeta y hubo al menos 1 OK.
+  if (ok && currentParent === parentAtStart) loadFolder(currentParent);
+  // Solo auto-cerrar si NO hubo errores; con errores, el usuario decide.
+  if (!err) setTimeout(() => uploadTray.classList.add('hidden'), 4000);
 });
 
 function openName(mode, item) {

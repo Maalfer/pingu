@@ -48,8 +48,10 @@ def home(request):
 
 def service_worker(request):
     """Sirve sw.js dinámicamente con la versión actual."""
-    body = """/* Pingu Service Worker v1 */
-const CACHE = 'pingu-v1';
+    # Bump del CACHE name fuerza a clients a invalidar lo que tenían (importante
+    # cuando cambian iconos/manifest/CSS).
+    body = """/* Pingu Service Worker v4 */
+const CACHE = 'pingu-v4';
 
 self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', e => {
@@ -114,6 +116,7 @@ self.addEventListener('notificationclick', e => {
 
 
 def manifest(request):
+    v = getattr(settings, "ASSET_VERSION", "1")
     return JsonResponse({
         "name": "Pingu",
         "short_name": "Pingu",
@@ -123,8 +126,9 @@ def manifest(request):
         "background_color": "#0a0a0f",
         "theme_color": "#0a0a0f",
         "icons": [
-            {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": f"/static/icons/icon-192.png?v={v}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": f"/static/icons/icon-512.png?v={v}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": f"/static/icons/icon-512.png?v={v}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
         ],
     })
 

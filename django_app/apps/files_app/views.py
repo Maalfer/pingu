@@ -3,27 +3,28 @@
 Los archivos físicos viven en settings.BALUHOME_UPLOADS_ROOT/files/<user_id>/<file_id>.
 Los metadatos (nombre, padre, mime, tamaño) están en la tabla FileNode.
 """
+import logging
 import re
 import urllib.parse
 from pathlib import Path
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import (
-    FileResponse, Http404, HttpResponse, JsonResponse, StreamingHttpResponse,
-)
-from django.shortcuts import render, get_object_or_404
+from django.conf import settings
+from django.http import Http404, JsonResponse, StreamingHttpResponse
+from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import FileNode
 
+log = logging.getLogger(__name__)
 
 ALLOWED_FOLDER_COLORS = {
     "#06b6d4", "#22c55e", "#eab308", "#f97316",
     "#ef4444", "#a855f7", "#ec4899", "#3b82f6",
     "#6b7280",
 }
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+# Cap server-side; nginx debe permitir al menos esto en client_max_body_size.
+MAX_FILE_SIZE = 1024 * 1024 * 1024  # 1 GB
 
 
 # ════════════ Helpers ════════════
@@ -165,10 +166,14 @@ def api_create_folder(request):
 def api_upload(request):
     f = request.FILES.get("file")
     if not f:
+        log.warning("upload: missing file field (user=%s, POST keys=%s, FILES keys=%s)",
+                    request.user.id, list(request.POST.keys()), list(request.FILES.keys()))
         return _err("Falta archivo")
     if f.size == 0:
         return _err("Archivo vacío")
     if f.size > MAX_FILE_SIZE:
+        log.info("upload: file too big (user=%s, size=%s, name=%r)",
+                 request.user.id, f.size, f.name)
         return _err(f"Máximo {MAX_FILE_SIZE // (1024 * 1024)} MB por archivo")
     try:
         parent_id = int(request.POST.get("parent_id") or 0)
@@ -178,6 +183,7 @@ def api_upload(request):
     if parent_id:
         parent = FileNode.objects.filter(pk=parent_id, user=request.user, is_folder=True).first()
         if not parent:
+            log.warning("upload: invalid parent_id=%s for user=%s", parent_id, request.user.id)
             return _err("Carpeta padre inválida")
 
     name = _safe_name(f.name or "archivo")

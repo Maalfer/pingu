@@ -22,7 +22,7 @@
           {% for f in received %}
           <div class="pf-friend-row" id="frow-{{ f.requester.id }}">
             <div class="pf-friend-avatar">
-              <img src="/static/avatars/{{ f.requester.id }}.jpg" onerror="this.remove()" alt="">{{ f.requester.username|slice:":1"|upper }}
+              {% with av=f.requester.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ f.requester.username|slice:":1"|upper }}
             </div>
             <div class="pf-friend-info">
               <span class="pf-friend-name">{{ f.requester.username }}</span>
@@ -52,7 +52,7 @@
             {% with friend=f.addressee %}
             <div class="pf-friend-row" id="frow-{{ friend.id }}">
               <div class="pf-friend-avatar">
-                <img src="/static/avatars/{{ friend.id }}.jpg" onerror="this.remove()" alt="">{{ friend.username|slice:":1"|upper }}
+                {% with av=friend.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ friend.username|slice:":1"|upper }}
               </div>
               <div class="pf-friend-info">
                 <span class="pf-friend-name">{{ friend.username }}</span>
@@ -67,7 +67,7 @@
             {% with friend=f.requester %}
             <div class="pf-friend-row" id="frow-{{ friend.id }}">
               <div class="pf-friend-avatar">
-                <img src="/static/avatars/{{ friend.id }}.jpg" onerror="this.remove()" alt="">{{ friend.username|slice:":1"|upper }}
+                {% with av=friend.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ friend.username|slice:":1"|upper }}
               </div>
               <div class="pf-friend-info">
                 <span class="pf-friend-name">{{ friend.username }}</span>
@@ -92,7 +92,7 @@
           {% for f in sent %}
           <div class="pf-friend-row" id="frow-{{ f.addressee.id }}">
             <div class="pf-friend-avatar">
-              <img src="/static/avatars/{{ f.addressee.id }}.jpg" onerror="this.remove()" alt="">{{ f.addressee.username|slice:":1"|upper }}
+              {% with av=f.addressee.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ f.addressee.username|slice:":1"|upper }}
             </div>
             <div class="pf-friend-info">
               <span class="pf-friend-name">{{ f.addressee.username }}</span>
@@ -115,7 +115,7 @@
           {% for u in others %}
           <div class="pf-friend-row" id="frow-{{ u.id }}">
             <div class="pf-friend-avatar">
-              <img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username|slice:":1"|upper }}
+              {% with av=u.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ u.username|slice:":1"|upper }}
             </div>
             <div class="pf-friend-info">
               <span class="pf-friend-name">{{ u.username }}</span>

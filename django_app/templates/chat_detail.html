@@ -4,7 +4,7 @@
 {% block wrapper_class %}subapp-wrapper chat-wrapper{% endblock %}
 
 {% block header_title %}
-<div class="friend-avatar" style="width:34px;height:34px;font-size:.85rem"><img src="/static/avatars/{{ other_user.id }}.jpg" onerror="this.remove()" alt="">{{ other_user.username|slice:":1"|upper }}</div>
+<div class="friend-avatar" style="width:34px;height:34px;font-size:.85rem">{% with av=other_user.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ other_user.username|slice:":1"|upper }}</div>
 <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ other_user.username }}</span>
 {% endblock %}
 

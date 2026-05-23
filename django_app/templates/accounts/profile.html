@@ -11,8 +11,10 @@
     <div class="pf-hero-bg"></div>
     <div class="pf-avatar-wrap" id="avatar-wrap">
       <div class="pf-avatar" id="avatar-display">
-        {% if has_avatar %}<img src="/static/avatars/{{ user.id }}.jpg?v={{ user.id }}" onerror="this.remove()" alt="" id="avatar-img">{% endif %}
-        <span id="avatar-letter"{% if has_avatar %} style="display:none"{% endif %}>{{ user.username|slice:":1"|upper }}</span>
+        {% with av=user.id|avatar_url %}
+          {% if av %}<img src="{{ av }}" alt="" id="avatar-img">{% endif %}
+          <span id="avatar-letter"{% if av %} style="display:none"{% endif %}>{{ user.username|slice:":1"|upper }}</span>
+        {% endwith %}
       </div>
       <div class="pf-avatar-ring" id="avatar-ring"></div>
       <div class="pf-avatar-cam">

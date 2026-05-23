@@ -125,6 +125,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Uploads: tope 1 GB. nginx debe ir alineado en client_max_body_size.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MB en RAM; el resto va a disco temporal
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024 + 10 * 1024 * 1024  # 1 GB + holgura
+
 # ── Sesiones / CSRF ───────────────────────────────────────────────────────────
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
 SESSION_COOKIE_HTTPONLY = True
@@ -163,7 +167,7 @@ LOGGING = {
 }
 
 # ── Constantes app ────────────────────────────────────────────────────────────
-ASSET_VERSION = os.environ.get("ASSET_VERSION", "v103")
+ASSET_VERSION = os.environ.get("ASSET_VERSION", "v104")
 
 BALUHOME_DATA_ROOT = Path(os.environ.get("BALUHOME_DATA_ROOT", BASE_DIR / "data"))
 BALUHOME_VAULT_ROOT = Path(os.environ.get("BALUHOME_VAULT_ROOT", BALUHOME_DATA_ROOT / "vault"))

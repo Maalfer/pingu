@@ -9,7 +9,7 @@
   <div class="friends-list" id="friends-list">
     {% for f in friends %}
     <a href="/gastos/{{ f.friend_id }}" class="friend-item">
-      <div class="friend-avatar"><img src="/static/avatars/{{ f.friend_id }}.jpg" onerror="this.remove()" alt="">{{ f.friend_name|slice:":1"|upper }}</div>
+      <div class="friend-avatar">{% with av=f.friend_id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ f.friend_name|slice:":1"|upper }}</div>
       <div class="friend-info">
         <span class="friend-name">{{ f.friend_name }}</span>
         {% if f.balance > 0 %}

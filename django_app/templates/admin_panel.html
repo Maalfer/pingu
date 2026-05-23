@@ -28,7 +28,7 @@
     <div class="admin-users-list" id="users-list">
       {% for u in users %}
       <div class="admin-user-row" data-id="{{ u.id }}" data-username="{{ u.username }}" data-role="{{ u.role }}">
-        <div class="admin-user-avatar"><img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username|slice:":1"|upper }}</div>
+        <div class="admin-user-avatar">{% with av=u.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ u.username|slice:":1"|upper }}</div>
         <div class="admin-user-info">
           <div class="admin-user-name" id="uname-{{ u.id }}">{{ u.username }}</div>
           <div class="admin-user-meta">

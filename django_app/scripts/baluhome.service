@@ -1,0 +1,35 @@
+[Unit]
+Description=BaluHome (Django + gunicorn/uvicorn workers)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/balusong/django_app
+EnvironmentFile=/var/www/balusong/django_app/.env
+Environment=HOME=/var/www/balusong
+ExecStart=/var/www/balusong/venv/bin/gunicorn \
+    config.asgi:application \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --workers 3 \
+    --bind 127.0.0.1:8001 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --access-logfile - \
+    --error-logfile -
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# NOTA: nginx separado en /etc/nginx/sites-available/baluhome.fatimaymariosecasan.es.conf
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/www/balusong
+
+[Install]
+WantedBy=multi-user.target

@@ -9,7 +9,7 @@
   <div class="chat-list" id="chat-list">
     {% for conv in conversations %}
     <a href="/chat/{{ conv.user.id }}" class="chat-conv-item {% if conv.unread > 0 %}has-unread{% endif %}">
-      <div class="chat-conv-avatar"><img src="/static/avatars/{{ conv.user.id }}.jpg" onerror="this.remove()" alt="">{{ conv.user.username|slice:":1"|upper }}</div>
+      <div class="chat-conv-avatar">{% with av=conv.user.id|avatar_url %}{% if av %}<img src="{{ av }}" alt="">{% endif %}{% endwith %}{{ conv.user.username|slice:":1"|upper }}</div>
       <div class="chat-conv-info">
         <div class="chat-conv-name">{{ conv.user.username }}</div>
         {% if conv.last_msg %}
