@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Chat con {{ other_user.username }} — Pingu{% endblock %}
+{% block body_class %}subapp-body chat-app-body{% endblock %}
+{% block wrapper_class %}subapp-wrapper chat-wrapper{% endblock %}
+
+{% block header_title %}
+<div class="friend-avatar" style="width:34px;height:34px;font-size:.85rem"><img src="/static/avatars/{{ other_user.id }}.jpg" onerror="this.remove()" alt="">{{ other_user.username|slice:":1"|upper }}</div>
+<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ other_user.username }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="chat-messages" id="chat-messages">
+  {% if not messages %}
+  <div class="empty-state" style="padding:3rem 1rem">
+    <p>Empieza la conversación</p>
+  </div>
+  {% endif %}
+  {% for msg in messages %}
+  <div class="chat-msg {% if msg.sender_id == user_id %}chat-msg-mine{% else %}chat-msg-theirs{% endif %}" data-id="{{ msg.id }}">
+    <div class="chat-bubble">
+      <div class="chat-text">{{ msg.content }}</div>
+      <div class="chat-time">{{ msg.created_at|slice:"11:16" }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="chat-input-area">
+  <input type="text" id="msg-input" class="chat-input" placeholder="Escribe un mensaje..." maxlength="1000" autocomplete="off">
+  <button class="btn btn-primary chat-send-btn" id="btn-send">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+  </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = "{{ csrf_token }}";
+const OTHER_ID = {{ other_user.id }};
+const MY_ID = {{ user_id }};
+const OTHER_NAME = "{{ other_user.username|escapejs }}";
+let lastId = {% if messages %}{{ messages[-1].id }}{% else %}0{% endif %};
+let polling = null;
+
+function api(url, body) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, csrf_token: CSRF }) }).then(r => r.json());
+}
+function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function appendMessage(msg) {
+  const container = document.getElementById('chat-messages');
+  const empty = container.querySelector('.empty-state');
+  if (empty) empty.remove();
+  const isMine = msg.sender_id === MY_ID;
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isMine ? 'chat-msg-mine' : 'chat-msg-theirs'}`;
+  div.dataset.id = msg.id;
+  div.innerHTML = `<div class="chat-bubble">
+    <div class="chat-text">${escapeHtml(msg.content)}</div>
+    <div class="chat-time">${(msg.created_at || '').substring(11,16)}</div>
+  </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  if (msg.id > lastId) lastId = msg.id;
+}
+
+document.getElementById('btn-send').addEventListener('click', sendMessage);
+document.getElementById('msg-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  const res = await api('/api/chat/send', { receiver_id: OTHER_ID, content });
+  if (res.success) {
+    appendMessage({ id: res.id, sender_id: MY_ID, content,
+      created_at: new Date().toISOString().replace('T', ' ') });
+  } else { input.value = content; alert(res.error || 'Error al enviar'); }
+}
+
+async function pollMessages() {
+  try {
+    const res = await fetch(`/api/chat/messages/${OTHER_ID}?since=${lastId}`);
+    const data = await res.json();
+    if (data.messages && data.messages.length > 0) {
+      data.messages.forEach(msg => {
+        if (!document.querySelector(`.chat-msg[data-id="${msg.id}"]`)) appendMessage(msg);
+      });
+    }
+  } catch (e) {}
+}
+
+const msgs = document.getElementById('chat-messages');
+msgs.scrollTop = msgs.scrollHeight;
+polling = setInterval(pollMessages, 3000);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearInterval(polling); polling = null; }
+  else if (!polling) { pollMessages(); polling = setInterval(pollMessages, 3000); }
+});
+</script>
+{% endblock %}

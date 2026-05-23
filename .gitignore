@@ -1,43 +1,39 @@
-# Python
+# ── Python ──────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
 venv/
 .env
+.env.local
 
-# ═════ DATOS DE USUARIO — NUNCA subir al repositorio ═════
-# Bóveda de Obsidian (notas .md + imágenes/adjuntos): vive bajo data/vault/.
-# Se ignora todo data/ y, de forma explícita y redundante, la bóveda y sus
-# adjuntos, para que sigan protegidos aunque se modifique la regla de arriba.
+# ── Datos de usuario — NUNCA al repo ────────────────────────────
 data/
-data/vault/
-data/vault/**
+**/data/balusong.sqlite3
+uploads/
 **/.obsidian/
 **/.trash/
 
-# Bases de datos
-baluhome.db
+# ── BD ──────────────────────────────────────────────────────────
 *.db
 *.sqlite
 *.sqlite3
 
-# Subidas de usuarios (datos binarios) y temporales de subida
-uploads/
-
-# Static avatars (generated at runtime)
+# ── Avatars y estáticos generados ───────────────────────────────
 static/avatars/
+static_collected/
+django_app/static/avatars/
 
-# Nginx / system
+# ── Apache (no se usa) ──────────────────────────────────────────
 .htaccess
 
-# Copias de seguridad locales / archivos temporales (no subir)
+# ── Backups y temporales ────────────────────────────────────────
 _*-backup-*/
 *.bak
 *.bak.*
 *-bak.*
 *.orig
-main_refactored.py
+*~
 
-# OS
+# ── OS ──────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Lista de la compra — Pingu{% endblock %}
+{% block body_class %}subapp-body subapp-body-shop{% endblock %}
+
+{% block header_title %}Lista de la Compra{% endblock %}
+{% block header_actions %}
+<button class="btn btn-sm btn-danger" id="btn-clear-done">Limpiar</button>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.shop-text-wrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.shop-author{font-size:.72rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="subapp-content">
+  <div id="shop-list" class="shop-list">
+    {% for item in items %}
+    <div class="shop-item {% if item.done %}done{% endif %}" data-id="{{ item.id }}">
+      <button class="shop-checkbox" data-id="{{ item.id }}" aria-label="Marcar como comprado">
+        <svg width="24" height="24" class="icon-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        <svg class="icon-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+      </button>
+      <div class="shop-text-wrap">
+        <span class="shop-text">{{ item.text }}</span>
+        {% if item.added_by_name %}<span class="shop-author">{{ item.added_by_name }}</span>{% endif %}
+      </div>
+      <button class="shop-delete" data-id="{{ item.id }}" aria-label="Eliminar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </div>
+    {% empty %}
+    <div class="empty-state" id="empty-state">
+      <svg width="24" height="24" class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59L5.25 14c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.46 4H5.21l-.94-2H1z"/></svg>
+      <p>La lista está vacía</p>
+      <p class="empty-sub">Añade productos abajo</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="shop-add-form" id="add-form">
+  <input type="text" id="new-item-input" class="shop-input" placeholder="Añadir producto..." maxlength="200" autocomplete="off">
+  <button class="btn btn-primary btn-add-item" id="btn-add">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+  </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = "{{ csrf_token }}";
+function api(url, body) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, csrf_token: CSRF }) }).then(r => r.json());
+}
+function checkEmpty() {
+  const items = document.querySelectorAll('.shop-item');
+  let empty = document.getElementById('empty-state');
+  if (items.length === 0) {
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.id = 'empty-state'; empty.className = 'empty-state';
+      empty.innerHTML = '<p>La lista está vacía</p><p class="empty-sub">Añade productos abajo</p>';
+      document.getElementById('shop-list').appendChild(empty);
+    }
+  } else if (empty) empty.remove();
+}
+document.getElementById('btn-add').addEventListener('click', addItem);
+document.getElementById('new-item-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+async function addItem() {
+  const input = document.getElementById('new-item-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.disabled = true;
+  const res = await api('/api/shopping/add', { text });
+  input.disabled = false;
+  if (res.success) {
+    input.value = '';
+    const empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+    document.getElementById('shop-list').prepend(mkShopItem(res.id, res.text, false, res.added_by_name || ''));
+    input.focus();
+  } else showError(res.error || 'Error al añadir');
+}
+
+document.getElementById('shop-list').addEventListener('click', async e => {
+  const checkBtn = e.target.closest('.shop-checkbox');
+  const deleteBtn = e.target.closest('.shop-delete');
+  if (checkBtn) {
+    const id = parseInt(checkBtn.dataset.id);
+    const res = await api('/api/shopping/toggle', { id });
+    if (res.success) document.querySelector(`.shop-item[data-id="${id}"]`).classList.toggle('done', res.done === 1);
+  }
+  if (deleteBtn) {
+    const id = parseInt(deleteBtn.dataset.id);
+    const res = await api('/api/shopping/delete', { id });
+    if (res.success) { document.querySelector(`.shop-item[data-id="${id}"]`).remove(); checkEmpty(); }
+  }
+});
+
+document.getElementById('btn-clear-done').addEventListener('click', async () => {
+  const doneItems = document.querySelectorAll('.shop-item.done');
+  if (doneItems.length === 0) return;
+  const res = await api('/api/shopping/clear-done', {});
+  if (res.success) { doneItems.forEach(el => el.remove()); checkEmpty(); }
+});
+
+function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function mkShopItem(id, text, done, author) {
+  const div = document.createElement('div');
+  div.className = 'shop-item' + (done ? ' done' : '');
+  div.dataset.id = id;
+  div.innerHTML = `
+    <button class="shop-checkbox" data-id="${id}" aria-label="Marcar como comprado">
+      <svg width="24" height="24" class="icon-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      <svg class="icon-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+    </button>
+    <div class="shop-text-wrap">
+      <span class="shop-text">${escapeHtml(text)}</span>
+      ${author ? `<span class="shop-author">${escapeHtml(author)}</span>` : ''}
+    </div>
+    <button class="shop-delete" data-id="${id}" aria-label="Eliminar">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+    </button>`;
+  return div;
+}
+
+async function syncShoppingList() {
+  try {
+    const res = await fetch('/api/shopping/list').then(r => r.json());
+    if (!res.items) return;
+    const list = document.getElementById('shop-list');
+    const incoming = new Map(res.items.map(i => [i.id, i]));
+    const existing = new Map([...list.querySelectorAll('.shop-item')].map(el => [Number(el.dataset.id), el]));
+    existing.forEach((el, id) => { if (!incoming.has(id)) el.remove(); });
+    res.items.forEach(item => {
+      let el = existing.get(item.id);
+      if (!el) {
+        el = mkShopItem(item.id, item.text, item.done === 1, item.added_by_name || '');
+        list.appendChild(el);
+      } else el.classList.toggle('done', item.done === 1);
+    });
+    checkEmpty();
+  } catch(e) {}
+}
+setInterval(syncShoppingList, 4000);
+
+function showError(msg) {
+  let t = document.getElementById('shop-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'shop-toast';
+    t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid rgba(239,68,68,.4);color:#ff6b6b;padding:.6rem 1.25rem;border-radius:50px;font-size:.875rem;font-weight:600;z-index:999;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(() => t.style.opacity = '0', 3000);
+}
+</script>
+{% endblock %}

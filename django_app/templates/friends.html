@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Amigos — Pingu{% endblock %}
+
+{% block header_title %}Amigos{% endblock %}
+
+{% block content %}
+<div class="pf-body">
+  <div class="pf-sections">
+    <div class="pf-card">
+      <div class="pf-friends-body" id="friends-body">
+
+        {% if not received and not accepted and not sent and not others %}
+        <p class="pf-friends-empty">No hay otros usuarios registrados aún.</p>
+        {% endif %}
+
+        {% if received %}
+        <div class="pf-friends-group">
+          <div class="pf-friends-group-title">
+            <span>Solicitudes recibidas</span>
+            <span class="pf-friends-count">{{ received|length }}</span>
+          </div>
+          {% for f in received %}
+          <div class="pf-friend-row" id="frow-{{ f.requester.id }}">
+            <div class="pf-friend-avatar">
+              <img src="/static/avatars/{{ f.requester.id }}.jpg" onerror="this.remove()" alt="">{{ f.requester.username|slice:":1"|upper }}
+            </div>
+            <div class="pf-friend-info">
+              <span class="pf-friend-name">{{ f.requester.username }}</span>
+              <span class="pf-friend-sub">quiere ser tu amigo</span>
+            </div>
+            <div class="pf-friend-actions">
+              <button class="pf-action-btn pf-btn-ok" onclick="friendAction('accept',{{ f.id }},{{ f.requester.id }},this)" title="Aceptar">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </button>
+              <button class="pf-action-btn pf-btn-no" onclick="friendAction('reject',{{ f.id }},{{ f.requester.id }},this)" title="Rechazar">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if accepted %}
+        <div class="pf-friends-group">
+          <div class="pf-friends-group-title">
+            <span>Tus amigos</span>
+            <span class="pf-friends-count">{{ accepted|length }}</span>
+          </div>
+          {% for f in accepted %}
+          {% if f.requester == user %}
+            {% with friend=f.addressee %}
+            <div class="pf-friend-row" id="frow-{{ friend.id }}">
+              <div class="pf-friend-avatar">
+                <img src="/static/avatars/{{ friend.id }}.jpg" onerror="this.remove()" alt="">{{ friend.username|slice:":1"|upper }}
+              </div>
+              <div class="pf-friend-info">
+                <span class="pf-friend-name">{{ friend.username }}</span>
+                <span class="pf-friend-sub pf-sub-ok">Amigos ✓</span>
+              </div>
+              <button class="pf-action-btn pf-btn-del" onclick="friendAction('unfriend',{{ f.id }},{{ friend.id }},this,'{{ friend.username }}')" title="Eliminar amigo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8c0-2.21-1.79-4-4-4S6 5.79 6 8s1.79 4 4 4 4-1.79 4-4zm3 2v2h6v-2h-6zM2 18v2h16v-2c0-2.66-5.33-4-8-4s-8 1.34-8 4z"/></svg>
+              </button>
+            </div>
+            {% endwith %}
+          {% else %}
+            {% with friend=f.requester %}
+            <div class="pf-friend-row" id="frow-{{ friend.id }}">
+              <div class="pf-friend-avatar">
+                <img src="/static/avatars/{{ friend.id }}.jpg" onerror="this.remove()" alt="">{{ friend.username|slice:":1"|upper }}
+              </div>
+              <div class="pf-friend-info">
+                <span class="pf-friend-name">{{ friend.username }}</span>
+                <span class="pf-friend-sub pf-sub-ok">Amigos ✓</span>
+              </div>
+              <button class="pf-action-btn pf-btn-del" onclick="friendAction('unfriend',{{ f.id }},{{ friend.id }},this,'{{ friend.username }}')" title="Eliminar amigo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8c0-2.21-1.79-4-4-4S6 5.79 6 8s1.79 4 4 4 4-1.79 4-4zm3 2v2h6v-2h-6zM2 18v2h16v-2c0-2.66-5.33-4-8-4s-8 1.34-8 4z"/></svg>
+              </button>
+            </div>
+            {% endwith %}
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if sent %}
+        <div class="pf-friends-group">
+          <div class="pf-friends-group-title">
+            <span>Solicitudes enviadas</span>
+            <span class="pf-friends-count">{{ sent|length }}</span>
+          </div>
+          {% for f in sent %}
+          <div class="pf-friend-row" id="frow-{{ f.addressee.id }}">
+            <div class="pf-friend-avatar">
+              <img src="/static/avatars/{{ f.addressee.id }}.jpg" onerror="this.remove()" alt="">{{ f.addressee.username|slice:":1"|upper }}
+            </div>
+            <div class="pf-friend-info">
+              <span class="pf-friend-name">{{ f.addressee.username }}</span>
+              <span class="pf-friend-sub">Pendiente…</span>
+            </div>
+            <button class="pf-action-btn pf-btn-del" onclick="friendAction('cancel',{{ f.id }},{{ f.addressee.id }},this)" title="Cancelar solicitud">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if others %}
+        <div class="pf-friends-group">
+          <div class="pf-friends-group-title">
+            <span>Añadir amigos</span>
+            <span class="pf-friends-count">{{ others|length }}</span>
+          </div>
+          {% for u in others %}
+          <div class="pf-friend-row" id="frow-{{ u.id }}">
+            <div class="pf-friend-avatar">
+              <img src="/static/avatars/{{ u.id }}.jpg" onerror="this.remove()" alt="">{{ u.username|slice:":1"|upper }}
+            </div>
+            <div class="pf-friend-info">
+              <span class="pf-friend-name">{{ u.username }}</span>
+            </div>
+            <button class="pf-action-btn pf-btn-ok" onclick="friendAction('add',null,{{ u.id }},this)" title="Añadir">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pf-toast" id="pf-toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = "{{ csrf_token }}";
+function api(url, body) {
+  return fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify(body) }).then(r => r.json());
+}
+let toastTimer;
+function toast(text, ok = true) {
+  const t = document.getElementById('pf-toast');
+  t.textContent = text;
+  t.className = 'pf-toast show ' + (ok ? 'ok' : 'err');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+async function friendAction(action, fid, uid, btn, name) {
+  btn.disabled = true; btn.style.opacity = '0.5';
+  try {
+    let res;
+    if (action === 'add')         res = await api('/friends/api/request', {user_id: uid});
+    else if (action === 'accept') res = await api('/friends/api/respond', {friendship_id: fid, accept: true});
+    else if (action === 'reject' || action === 'cancel')
+                                  res = await api('/friends/api/respond', {friendship_id: fid, accept: false});
+    else if (action === 'unfriend') {
+      if (!confirm('¿Eliminar a ' + (name || 'este amigo') + ' de tus amigos?')) {
+        btn.disabled = false; btn.style.opacity = ''; return;
+      }
+      res = await api('/friends/api/remove', {friendship_id: fid});
+    }
+    if (res && res.success) { toast('OK'); setTimeout(() => location.reload(), 500); }
+    else { toast(res?.error || 'Error', false); btn.disabled = false; btn.style.opacity = ''; }
+  } catch {
+    toast('Error de conexión', false);
+    btn.disabled = false; btn.style.opacity = '';
+  }
+}
+</script>
+{% endblock %}

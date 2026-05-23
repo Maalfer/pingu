@@ -1,0 +1,15 @@
+[Unit]
+Description=BaluHome Django (gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=mario
+Group=www-data
+WorkingDirectory=/home/mario/balusong_django
+ExecStart=/home/mario/balusong_django/scripts/run_gunicorn.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

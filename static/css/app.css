@@ -449,7 +449,7 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--bnav-h);
+  bottom: env(safe-area-inset-bottom, 0);
   height: var(--player-h);
   background: var(--bg2);
   border-top: 1px solid var(--border);
@@ -461,15 +461,21 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
   transition: transform 0.3s ease;
 }
 
-@media (min-width: 768px) {
-  .player-bar {
-    bottom: 0;
-    left: var(--sidebar-w);
-    padding: 0 1.5rem;
-  }
-}
+@media (min-width: 768px) { .player-bar { padding: 0 1.5rem; } }
 
 .player-bar.hidden { transform: translateY(100%); }
+
+/* Cuando hay una canción cargada se añade .has-player al body para que el
+   contenido no quede tapado por la barra del reproductor.
+   Excepciones: chat-app-body controla su propia altura (100dvh + overflow:hidden);
+   music-app ya reserva el espacio en #main-content. */
+body.has-player:not(.chat-app-body):not(.music-app):not(.subapp-body-shop) { padding-bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0)); }
+/* Layouts con altura fija (shop/todos/chat): el input/list inferior se anclan
+   por encima del reproductor mediante un padding-bottom interno. */
+body.has-player.subapp-body-shop .subapp-content,
+body.has-player.subapp-body-shop .shop-add-form { margin-bottom: 0; }
+body.has-player.subapp-body-shop .shop-add-form { padding-bottom: calc(var(--player-h) + .75rem + env(safe-area-inset-bottom, 0px)); }
+body.has-player.chat-app-body .chat-input-area { padding-bottom: calc(var(--player-h) + .75rem + env(safe-area-inset-bottom, 0px)); }
 
 .player-track {
   flex: 1;
@@ -483,7 +489,7 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 .player-thumb {
   width: 48px;
   height: 48px;
-  border-radius: 4px;
+  border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
   background: var(--bg3);
@@ -815,19 +821,21 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
   width: 48px;
   height: 48px;
   flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .song-thumb {
   width: 48px;
   height: 48px;
-  border-radius: 4px;
+  border-radius: 50%;
   object-fit: cover;
 }
 
 .song-thumb-placeholder {
   width: 48px;
   height: 48px;
-  border-radius: 4px;
+  border-radius: 50%;
   background: var(--bg3);
   display: flex;
   align-items: center;
@@ -1396,9 +1404,14 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
   background: var(--bg);
   min-height: 100vh;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .home-wrapper {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   max-width: 580px;
   margin: 0 auto;
   padding: 0 1.25rem 3rem;
@@ -1493,6 +1506,7 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 .home-refresh:active svg { transform: rotate(360deg); transition: transform .5s ease; }
 
 .home-greeting {
+  margin-top: 1.4rem;
   margin-bottom: 2rem;
 }
 .home-greeting h2 {
@@ -1609,16 +1623,22 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 .app-card:hover .app-card-arrow { color: var(--cyan); }
 
 /* ── SUB-APP LAYOUT ── */
+/* Body es flex-column: header (altura natural) + wrapper (flex:1).
+   El header vive como hijo directo de <body>, así que ocupa todo el ancho. */
 .subapp-body {
   background: var(--bg);
   min-height: 100vh;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .subapp-wrapper {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   max-width: 680px;
   margin: 0 auto;
 }
@@ -1686,7 +1706,7 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 .btn-add-item {
   width: 46px;
   height: 46px;
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   padding: 0;
   flex-shrink: 0;
 }
@@ -1753,7 +1773,7 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 }
 .cal-month-header button {
   width: 32px; height: 32px;
-  border-radius: 6px;
+  border-radius: 50%;
   background: var(--bg3);
   color: var(--text2);
   font-size: .9rem;
@@ -2081,8 +2101,14 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 .request-actions { display: flex; gap: .5rem; flex-shrink: 0; }
 
 /* ── CHAT LAYOUT ── */
-.chat-app-body { overflow: hidden; }
-.chat-wrapper { height: 100vh; height: 100dvh; overflow: hidden; }
+.chat-app-body {
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+}
+/* .chat-wrapper ya está en flex-column (heredado de .subapp-wrapper) y toma el
+   alto restante del body via flex:1; no necesita height:100dvh propio. */
+.chat-wrapper { overflow: hidden; }
 
 .chat-header-detail { align-items: center; }
 .chat-header-user {
@@ -2821,9 +2847,9 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 .pf-card-toggle:active { background: var(--bg3); }
 
 .pf-card-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3220,9 +3246,9 @@ body.home-body { padding-left: env(safe-area-inset-left, 0); padding-right: env(
 }
 
 .pf-action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   border: none;
   display: flex;
   align-items: center;
@@ -3263,9 +3289,9 @@ input, textarea, select {
 /* Remove tap highlight globally */
 * { -webkit-tap-highlight-color: transparent; }
 
-/* Chat: use dynamic viewport height so keyboard pushes input up */
+/* Chat: use dynamic viewport height so keyboard pushes input up.
+   chat-wrapper toma el alto restante del body via flex (definido más arriba). */
 .chat-app-body { height: 100dvh; overflow: hidden; }
-.chat-wrapper   { height: 100dvh; }
 
 .chat-messages {
   overscroll-behavior: contain;
@@ -3355,9 +3381,11 @@ button, a { touch-action: manipulation; }
   height: 100dvh;
   height: 100vh; /* fallback */
   overflow: hidden;
+  /* body sigue siendo flex column (heredado de .subapp-body): header fuera del wrapper */
 }
 .subapp-body-shop .subapp-wrapper {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 .subapp-body-shop .subapp-content {
@@ -3467,6 +3495,8 @@ button, a { touch-action: manipulation; }
   top: 0;
   z-index: 50;
   min-height: 56px;
+  /* Vive a nivel de <body>, no del wrapper → ya ocupa todo el ancho. */
+  box-sizing: border-box;
 }
 .bh-header-left {
   display: flex;
@@ -3517,7 +3547,15 @@ button, a { touch-action: manipulation; }
   font-size: 1.1rem;
   color: var(--text);
   letter-spacing: -.3px;
+  text-decoration: none;
+  padding: .3rem .55rem;
+  margin-left: -.55rem;
+  border-radius: 10px;
+  transition: background .12s, transform .08s;
+  cursor: pointer;
 }
+.bh-brand:hover { background: var(--bg3); }
+.bh-brand:active { transform: scale(.97); }
 .bh-brand-icon { width: 24px; height: 24px; color: var(--cyan); }
 
 /* Drawer toggle button is always visible (desktop + mobile) for consistency */
@@ -3825,19 +3863,19 @@ button, a { touch-action: manipulation; }
 :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #a8afbf; }
 
 /* Theme-color for status bar */
-:root[data-theme="light"] body.home-body,
+:root[data-theme="light"] body.home-body {
+  background: linear-gradient(180deg, #e8efff 0%, var(--bg) 320px);
+}
 :root[data-theme="light"] body.subapp-body {
   background: var(--bg);
 }
-
-/* Home page gradient: use a light gradient */
-:root[data-theme="light"] .home-wrapper {
-  background: linear-gradient(180deg, #e8efff 0%, var(--bg) 320px);
-}
 @media (min-width: 768px) {
-  :root[data-theme="light"] .home-wrapper {
+  :root[data-theme="light"] body.home-body {
     background: linear-gradient(180deg, #e8efff 0%, var(--bg) 420px);
   }
+}
+:root[data-theme="light"] .home-wrapper {
+  background: transparent;
 }
 
 /* App cards (home grid) */
@@ -3999,17 +4037,16 @@ button, a { touch-action: manipulation; }
 :root[data-theme="dracula"] ::-webkit-scrollbar-thumb:hover { background: #6272a4; }
 
 /* Home & subapp backgrounds */
-:root[data-theme="dracula"] body.home-body,
-:root[data-theme="dracula"] body.subapp-body { background: var(--bg); }
-
-:root[data-theme="dracula"] .home-wrapper {
+:root[data-theme="dracula"] body.home-body {
   background: linear-gradient(180deg, #2f2b46 0%, var(--bg) 320px);
 }
+:root[data-theme="dracula"] body.subapp-body { background: var(--bg); }
 @media (min-width: 768px) {
-  :root[data-theme="dracula"] .home-wrapper {
+  :root[data-theme="dracula"] body.home-body {
     background: linear-gradient(180deg, #2f2b46 0%, var(--bg) 420px);
   }
 }
+:root[data-theme="dracula"] .home-wrapper { background: transparent; }
 
 /* Music app sidebar gradient */
 :root[data-theme="dracula"] #sidebar {
@@ -4165,17 +4202,16 @@ button, a { touch-action: manipulation; }
 :root[data-theme="pink"] ::-webkit-scrollbar-thumb { background: #f1a8c4; }
 :root[data-theme="pink"] ::-webkit-scrollbar-thumb:hover { background: #ec80aa; }
 
-:root[data-theme="pink"] body.home-body,
-:root[data-theme="pink"] body.subapp-body { background: var(--bg); }
-
-:root[data-theme="pink"] .home-wrapper {
+:root[data-theme="pink"] body.home-body {
   background: linear-gradient(180deg, #ffd9e8 0%, var(--bg) 320px);
 }
+:root[data-theme="pink"] body.subapp-body { background: var(--bg); }
 @media (min-width: 768px) {
-  :root[data-theme="pink"] .home-wrapper {
+  :root[data-theme="pink"] body.home-body {
     background: linear-gradient(180deg, #ffd9e8 0%, var(--bg) 420px);
   }
 }
+:root[data-theme="pink"] .home-wrapper { background: transparent; }
 
 :root[data-theme="pink"] #sidebar {
   background: linear-gradient(180deg, #ffd9e8 0%, var(--bg) 300px);
@@ -4290,10 +4326,198 @@ button, a { touch-action: manipulation; }
 }
 :root[data-theme="pink"] .pf-theme-dark { background: #161824; color: #c5cbe3; }
 
-/* Picker grid: 4 themes — 2 columns, comfortable */
+/* =============================================
+   AQUA THEME
+   Light & cyan: airy white-cyan surfaces, deep
+   teal text, vibrant cyan accent.
+   ============================================= */
+:root[data-theme="aqua"] {
+  --bg:  #ecfdff;
+  --bg2: #ffffff;
+  --bg3: #d6f5fb;
+  --bg4: #bbecf5;
+  --text:  #093842;
+  --text2: #2c6571;
+  --text3: #6aa3af;
+  --border: #b3e5ef;
+  --cyan: #06b6d4;
+  --cyan-hover: #0891b2;
+  --cyan-dim: rgba(6,182,212,0.12);
+  --cyan-border: rgba(6,182,212,0.38);
+  --red: #e11d48;
+}
+
+:root[data-theme="aqua"] body { background: var(--bg); color: var(--text); }
+
+:root[data-theme="aqua"] ::-webkit-scrollbar-thumb { background: #9bd9e6; }
+:root[data-theme="aqua"] ::-webkit-scrollbar-thumb:hover { background: #6fc7d9; }
+
+:root[data-theme="aqua"] body.home-body {
+  background: linear-gradient(180deg, #c4f2fb 0%, var(--bg) 320px);
+}
+:root[data-theme="aqua"] body.subapp-body { background: var(--bg); }
+@media (min-width: 768px) {
+  :root[data-theme="aqua"] body.home-body {
+    background: linear-gradient(180deg, #c4f2fb 0%, var(--bg) 420px);
+  }
+}
+:root[data-theme="aqua"] .home-wrapper { background: transparent; }
+
+:root[data-theme="aqua"] #sidebar {
+  background: linear-gradient(180deg, #c4f2fb 0%, var(--bg) 300px);
+  border-right: 1px solid var(--border);
+}
+
+:root[data-theme="aqua"] .app-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(6,140,170,.08);
+}
+:root[data-theme="aqua"] .app-card:hover {
+  background: var(--bg2);
+  box-shadow: 0 4px 18px rgba(6,140,170,.18);
+  border-color: var(--cyan-border);
+}
+
+:root[data-theme="aqua"] .subapp-header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+
+:root[data-theme="aqua"] .player-bar,
+:root[data-theme="aqua"] #bottom-nav {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+}
+
+:root[data-theme="aqua"] .modal-backdrop { background: rgba(8,60,80,0.38); }
+:root[data-theme="aqua"] .modal-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(6,140,170,.20);
+}
+
+:root[data-theme="aqua"] input,
+:root[data-theme="aqua"] textarea,
+:root[data-theme="aqua"] select,
+:root[data-theme="aqua"] .form-select,
+:root[data-theme="aqua"] .pf-input {
+  background: var(--bg2);
+  color: var(--text);
+  border-color: var(--border);
+}
+:root[data-theme="aqua"] input::placeholder,
+:root[data-theme="aqua"] textarea::placeholder { color: var(--text3); }
+
+:root[data-theme="aqua"] .cal-grid {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+:root[data-theme="aqua"] .cal-day:hover { background: var(--bg3); color: var(--text); }
+:root[data-theme="aqua"] .cal-day.today { color: #fff; }
+
+:root[data-theme="aqua"] .btn-primary { color: #fff; }
+:root[data-theme="aqua"] .btn-secondary {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+:root[data-theme="aqua"] .btn-secondary:hover { background: var(--bg3); }
+:root[data-theme="aqua"] .card-badge { color: #fff; }
+
+:root[data-theme="aqua"] .pf-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(6,140,170,.06);
+}
+
+:root[data-theme="aqua"] .pf-chevron,
+:root[data-theme="aqua"] .friend-arrow,
+:root[data-theme="aqua"] .cal-event-chev { color: var(--text3); }
+
+:root[data-theme="aqua"] .pf-hero-bg {
+  background: linear-gradient(180deg, #c4f2fb 0%, var(--bg) 100%);
+}
+
+:root[data-theme="aqua"] .pf-friend-avatar {
+  background: linear-gradient(135deg, #06b6d4, #0e7490);
+  color: #fff;
+}
+
+:root[data-theme="aqua"] .empty-state { color: var(--text2); }
+:root[data-theme="aqua"] .empty-icon  { color: var(--text3); }
+
+:root[data-theme="aqua"] .pf-logout-row {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+:root[data-theme="aqua"] .chat-bubble.me { background: var(--cyan); color: #fff; }
+:root[data-theme="aqua"] .chat-bubble.them { background: var(--bg3); color: var(--text); }
+:root[data-theme="aqua"] .chat-input-area { background: var(--bg2); border-top: 1px solid var(--border); }
+
+:root[data-theme="aqua"] .pf-toast {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(6,140,170,.16);
+}
+
+:root[data-theme="aqua"] .login-wrapper,
+:root[data-theme="aqua"] .register-wrapper {
+  background: linear-gradient(180deg, #c4f2fb 0%, var(--bg) 320px);
+}
+
+/* ---- Aqua polish: cohesive cyan accents across the whole app ---- */
+:root[data-theme="aqua"] ::selection { background: rgba(6,182,212,.22); color: var(--text); }
+
+/* Airy cyan background with a soft glow at the top */
+:root[data-theme="aqua"] body.subapp-body {
+  background: linear-gradient(180deg, #e0faff 0%, var(--bg) 280px);
+}
+
+/* Header: subtle cyan-tinted glass with gentle depth */
+:root[data-theme="aqua"] .bh-header {
+  background: linear-gradient(180deg, #f2feff 0%, #ffffff 100%);
+  border-bottom-color: #c8edf4;
+  box-shadow: 0 6px 20px -14px rgba(6,140,170,.45);
+}
+@media (min-width: 768px) {
+  :root[data-theme="aqua"] .home-wrapper > .bh-header::before,
+  :root[data-theme="aqua"] .subapp-wrapper > .bh-header::before {
+    background: linear-gradient(180deg, #f2feff 0%, #ffffff 100%);
+    border-bottom-color: #c8edf4;
+  }
+}
+
+/* Cards: softer cyan border for a more integrated look */
+:root[data-theme="aqua"] .app-card,
+:root[data-theme="aqua"] .pf-card,
+:root[data-theme="aqua"] .cal-grid,
+:root[data-theme="aqua"] .pf-logout-row { border-color: #cdeef5; }
+
+/* Inputs: cyan focus ring */
+:root[data-theme="aqua"] input:focus,
+:root[data-theme="aqua"] textarea:focus,
+:root[data-theme="aqua"] select:focus,
+:root[data-theme="aqua"] .pf-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-dim);
+  outline: none;
+}
+
+/* Theme picker preview swatch */
+.pf-theme-aqua {
+  background: linear-gradient(135deg, #d6f7fd 0%, #06b6d4 100%);
+  color: #fff;
+  border: 1px solid #b3e5ef;
+}
+:root[data-theme="aqua"] .pf-theme-dark { background: #161824; color: #c5cbe3; }
+
+/* Picker grid: 5 themes — 2 cols on phones, 3 on wider screens */
 .pf-theme-row { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 540px) {
-  .pf-theme-row { grid-template-columns: repeat(4, 1fr); }
+  .pf-theme-row { grid-template-columns: repeat(3, 1fr); }
 }
 .pf-theme-btn { padding: .6rem .65rem; }
 .pf-theme-btn .pf-theme-name { font-size: .82rem; }
@@ -4404,7 +4628,7 @@ button, a { touch-action: manipulation; }
 .files-new-icon {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4543,4 +4767,472 @@ button, a { touch-action: manipulation; }
     align-content: start;
     gap: 1rem;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME PAGE — EXPERIENCIA ESCRITORIO MEJORADA (≥ 1024px)
+   Convierte la lista de apps móvil en un launcher de iconos con estilo.
+   No modifica nada por debajo de 1024px.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+
+  /* Contenedor: más ancho y con más espacio */
+  .home-wrapper {
+    max-width: 1100px;
+    padding: 0 3rem 4rem;
+  }
+
+  /* Saludo más grande con separador visual */
+  .home-greeting {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .home-greeting h2 {
+    font-size: 2.2rem;
+    letter-spacing: -.5px;
+  }
+  .home-greeting p {
+    font-size: 1.05rem;
+    margin-top: .4rem;
+  }
+
+  /* Rejilla de 3 columnas con más espacio entre tarjetas */
+  .app-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  /* ── Tarjetas: diseño vertical tipo launcher de apps ── */
+  .app-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1.5rem 1.75rem;
+    gap: 1rem;
+    min-height: 164px;
+    justify-content: center;
+    border-radius: 16px;
+    transition: border-color .2s ease, background .2s ease,
+                transform .2s ease, box-shadow .2s ease;
+  }
+  .app-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 32px rgba(0,0,0,.4);
+    background: var(--bg3);
+  }
+  .app-card:active {
+    transform: translateY(-1px);
+    opacity: 1;
+  }
+
+  /* Icono más grande y redondeado */
+  .app-card-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+  }
+  .app-card-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Texto centrado verticalmente */
+  .app-card-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+  }
+  .app-card-title {
+    font-size: 1rem;
+    letter-spacing: -.1px;
+  }
+  .app-card-desc {
+    justify-content: center;
+    font-size: .75rem;
+  }
+
+  /* La flecha no tiene sentido en layout de tile */
+  .app-card-arrow { display: none; }
+
+  /* ── Color único por aplicación (solo en escritorio) ── */
+  .card-notes    .app-card-icon { background: rgba(6,182,212,.18);   color: #06b6d4; }
+  .card-music    .app-card-icon { background: rgba(168,85,247,.18);  color: #a855f7; }
+  .card-video    .app-card-icon { background: rgba(251,113,133,.18); color: #fb7185; }
+  .card-shopping .app-card-icon { background: rgba(52,211,153,.18);  color: #34d399; }
+  .card-todos    .app-card-icon { background: rgba(251,191,36,.18);  color: #fbbf24; }
+  .card-calendar .app-card-icon { background: rgba(96,165,250,.18);  color: #60a5fa; }
+  .card-gastos   .app-card-icon { background: rgba(252,211,77,.18);  color: #fcd34d; }
+  .card-chat     .app-card-icon { background: rgba(45,212,191,.18);  color: #2dd4bf; }
+  .card-files    .app-card-icon { background: rgba(129,140,248,.18); color: #818cf8; }
+
+  /* ── Hover: borde con el color del icono de cada app ── */
+  .card-notes:hover    { border-color: rgba(6,182,212,.45);    }
+  .card-music:hover    { border-color: rgba(168,85,247,.45);   }
+  .card-video:hover    { border-color: rgba(251,113,133,.45);  }
+  .card-shopping:hover { border-color: rgba(52,211,153,.45);   }
+  .card-todos:hover    { border-color: rgba(251,191,36,.45);   }
+  .card-calendar:hover { border-color: rgba(96,165,250,.45);   }
+  .card-gastos:hover   { border-color: rgba(252,211,77,.45);   }
+  .card-chat:hover     { border-color: rgba(45,212,191,.45);   }
+  .card-files:hover    { border-color: rgba(129,140,248,.45);  }
+
+  /* ── Tema claro: ajustar opacidad de fondos de icono ── */
+}
+
+@media (min-width: 1024px) {
+  :root[data-theme=light] .card-notes    .app-card-icon { background: rgba(6,182,212,.12);   }
+  :root[data-theme=light] .card-music    .app-card-icon { background: rgba(168,85,247,.12);  }
+  :root[data-theme=light] .card-video    .app-card-icon { background: rgba(251,113,133,.12); }
+  :root[data-theme=light] .card-shopping .app-card-icon { background: rgba(52,211,153,.12);  }
+  :root[data-theme=light] .card-todos    .app-card-icon { background: rgba(251,191,36,.12);  }
+  :root[data-theme=light] .card-calendar .app-card-icon { background: rgba(96,165,250,.12);  }
+  :root[data-theme=light] .card-gastos   .app-card-icon { background: rgba(252,211,77,.12);  }
+  :root[data-theme=light] .card-chat     .app-card-icon { background: rgba(45,212,191,.12);  }
+  :root[data-theme=light] .card-files    .app-card-icon { background: rgba(129,140,248,.12); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME HEADER — FULL WIDTH EN TODAS LAS RESOLUCIONES
+   El wrapper tiene max-width limitado pero el header siempre debe
+   ocupar todo el ancho de la ventana (como un header real).
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.home-body { overflow-x: hidden; }
+
+.home-wrapper > .bh-header {
+  background: transparent !important;
+  border-bottom: none !important;
+}
+.home-wrapper > .bh-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  z-index: -1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESKTOP NAV — barra de navegación en el header para pantallas grandes.
+   Oculto en móvil (<1024px). El hamburger se oculta en escritorio (≥1024px).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Por defecto el nav de escritorio está oculto */
+.bh-desk-nav {
+  display: none;
+  align-items: center;
+  gap: .25rem;
+}
+
+/* Botones de icono del nav de escritorio */
+.bh-desk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--text3);
+  text-decoration: none;
+  transition: background .12s, color .12s;
+  flex-shrink: 0;
+}
+.bh-desk-btn svg { width: 20px; height: 20px; }
+.bh-desk-btn:hover { background: var(--bg3); color: var(--text2); }
+
+/* Botón de logout con color de peligro al hacer hover */
+.bh-desk-logout:hover { background: rgba(239,68,68,.1); color: #ef4444; }
+
+/* Separador vertical */
+.bh-desk-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 .25rem;
+  flex-shrink: 0;
+}
+
+/* Chip de usuario: avatar + nombre */
+.bh-desk-user {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .25rem .5rem .25rem .25rem;
+  border-radius: 50px;
+  border: none;
+  text-decoration: none;
+  color: var(--text2);
+  font-size: .825rem;
+  font-weight: 600;
+  transition: background .12s, color .12s;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 160px;
+}
+.bh-desk-user:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.bh-desk-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--cyan-dim);
+  border: 1px solid var(--cyan-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: 800;
+  color: var(--cyan);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.bh-desk-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.bh-desk-avatar span { position: relative; z-index: 1; }
+.bh-desk-avatar:has(img) span { display: none; }
+
+.bh-desk-username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── En escritorio (≥1024px): mostrar nav, ocultar hamburguesa ── */
+@media (min-width: 1024px) {
+  .bh-desk-nav { display: flex; }
+  .bh-header .hb-toggle { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOTAS — DROPDOWN DE AJUSTES DE LA BÓVEDA
+   Menú desplegable bajo el icono de engranaje (btn-img-dir).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.vault-settings-wrap {
+  position: relative;
+}
+
+.vault-settings-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg3);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: .3rem;
+  min-width: 190px;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  animation: vsm-fade .12s ease-out;
+}
+.vault-settings-menu.hidden { display: none; }
+
+@keyframes vsm-fade {
+  from { opacity: 0; transform: translateY(-4px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vsm-item {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  padding: .55rem .7rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,.8);
+  cursor: pointer;
+  font: inherit;
+  font-size: .85rem;
+  text-align: left;
+  white-space: nowrap;
+  transition: background .1s;
+}
+.vsm-item:hover { background: rgba(255,255,255,.1); color: #fff; }
+.vsm-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .7; }
+.vsm-item:hover svg { opacity: 1; }
+
+.vsm-sep {
+  height: 1px;
+  background: rgba(255,255,255,.08);
+  margin: .25rem 0;
+}
+
+/* Tema claro */
+:root[data-theme="light"] .vault-settings-menu,
+:root[data-theme="aqua"] .vault-settings-menu {
+  background: #fff;
+  border-color: rgba(0,0,0,.12);
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+:root[data-theme="light"] .vsm-item,
+:root[data-theme="aqua"] .vsm-item { color: #333; }
+:root[data-theme="light"] .vsm-item:hover,
+:root[data-theme="aqua"] .vsm-item:hover { background: rgba(0,0,0,.06); }
+:root[data-theme="light"] .vsm-sep,
+:root[data-theme="aqua"] .vsm-sep { background: rgba(0,0,0,.1); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CAST A TV — sección en ajustes
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pf-icon-cast { background: rgba(6,182,212,.15); color: #06b6d4; }
+
+.cast-desc {
+  font-size: .875rem;
+  color: var(--text2);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+/* Network banner */
+.cast-net-banner {
+  display: none;
+  font-size: .8rem;
+  padding: .55rem .8rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+.cast-net-banner.ok   { background: rgba(34,197,94,.1);  color: rgba(255,255,255,.8); }
+.cast-net-banner.warn { background: rgba(245,158,11,.12); color: rgba(255,255,255,.8); }
+.cast-net-banner.info { background: rgba(99,102,241,.1); color: rgba(255,255,255,.8); }
+:root[data-theme=light] .cast-net-banner { color: var(--text2); }
+.cast-net-ok   { color: #22c55e; margin-right: .35rem; }
+.cast-net-warn { color: #f59e0b; margin-right: .35rem; }
+.cast-net-info { color: #818cf8; margin-right: .35rem; }
+
+/* Start button */
+.cast-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .7rem 1.4rem;
+  border-radius: 12px;
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+/* Active state */
+.cast-active-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: 1.1rem;
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--text);
+}
+.cast-live-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34,197,94,.7);
+  animation: cast-pulse 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes cast-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(34,197,94,.7); }
+  50%       { opacity: .6; box-shadow: 0 0 14px rgba(34,197,94,.9); }
+}
+.cast-viewers-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(6,182,212,.15);
+  color: #06b6d4;
+  font-size: .75rem;
+  font-weight: 700;
+  padding: .15rem .55rem;
+  border-radius: 50px;
+}
+.cast-stop-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(239,68,68,.12);
+  color: #ef4444;
+  cursor: pointer;
+  transition: background .15s;
+}
+.cast-stop-btn:hover { background: rgba(239,68,68,.2); }
+
+/* Room block */
+.cast-room-block {
+  background: var(--bg3);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.cast-room-label {
+  font-size: .7rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: .4rem;
+}
+.cast-room-code {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: .25em;
+  color: #06b6d4;
+  margin-bottom: .3rem;
+  font-variant-numeric: tabular-nums;
+}
+.cast-room-url {
+  font-size: .75rem;
+  color: var(--text3);
+  word-break: break-all;
+  margin-bottom: .75rem;
+}
+.cast-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-size: .8rem;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.cast-copy-btn:hover { background: var(--bg4); color: var(--text); }
+
+/* How-to section */
+.cast-howto {
+  font-size: .82rem;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.cast-howto strong { color: var(--text); }
+.cast-howto ol {
+  margin: .4rem 0 .6rem 1.2rem;
+}
+.cast-howto li { margin-bottom: .15rem; }
+.cast-tip {
+  font-size: .78rem;
+  color: var(--text3);
+  padding: .4rem .7rem;
+  background: rgba(255,255,255,.04);
+  border-radius: 8px;
 }

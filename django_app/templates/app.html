@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Música — Pingu{% endblock %}
+
+{% block header_title %}Música{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Music app: dedicated layout overrides since we no longer use the legacy sidebar/bnav */
+body.music-app { background: var(--bg); color: var(--text); }
+#main-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--player-h) + 1.25rem + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(180deg, #1a1a2e 0%, var(--bg) 320px);
+}
+.music-app .player-bar {
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0);
+  padding: 0 .75rem;
+}
+@media (min-width: 768px) {
+  .music-app .player-bar { padding: 0 1.5rem; }
+}
+:root[data-theme="light"] .music-app #main-content { background: linear-gradient(180deg, #e8efff 0%, var(--bg) 320px); }
+:root[data-theme="dracula"] .music-app #main-content { background: linear-gradient(180deg, #2f2b46 0%, var(--bg) 320px); }
+:root[data-theme="pink"] .music-app #main-content { background: linear-gradient(180deg, #ffd9e8 0%, var(--bg) 320px); }
+:root[data-theme="aqua"] .music-app #main-content { background: linear-gradient(180deg, #c4f2fb 0%, var(--bg) 320px); }
+</style>
+{% endblock %}
+
+{% block body_class %}subapp-body music-app{% endblock %}
+{% block wrapper_class %}subapp-wrapper{% endblock %}
+
+{% block content %}
+<main id="main-content">
+  <div id="content-area">
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  </div>
+</main>
+{% endblock %}
+
+{% block body_end %}
+<!-- Add Song Modal -->
+<div id="modal-add-song" class="modal hidden">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Añadir canción</h2>
+      <button class="modal-close" id="modal-close-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Pega el enlace de YouTube y extraeremos el audio automáticamente.</p>
+      <div id="add-song-form">
+        <div class="form-group">
+          <label for="yt-url">Enlace de YouTube</label>
+          <input type="url" id="yt-url" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
+        </div>
+        <button class="btn btn-primary btn-full" id="btn-add-song">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Añadir canción
+        </button>
+        <div id="add-song-status" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.APP = {
+  csrf: "{{ csrf_token }}",
+  userId: {{ user_id|default:'null' }},
+  userRole: "{{ user_role|escapejs }}",
+  username: "{{ username|escapejs }}"
+};
+</script>
+<script src="/static/js/app.js?v={{ ASSET_VERSION }}"></script>
+{% endblock %}

@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+{% block title %}Calendario — Pingu{% endblock %}
+
+{% block header_title %}Calendario{% endblock %}
+{% block header_actions %}
+<button class="btn btn-sm btn-primary" id="btn-add-event">+ Añadir</button>
+{% endblock %}
+
+{% block content %}
+<div class="subapp-content">
+  <div class="cal-grid-wrap" id="cal-wrap"></div>
+  <div class="cal-events-section">
+    <div class="cal-events-head">
+      <h3 class="cal-section-title" id="events-title">Eventos del mes</h3>
+      <button class="cal-clear-filter" id="cal-clear-filter" style="display:none">Ver todos</button>
+    </div>
+    <div id="events-list" class="cal-events-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block body_end %}
+<div id="modal-detail" class="modal hidden">
+  <div class="modal-backdrop" data-close-detail></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="detail-title">Evento</h2>
+      <button class="modal-close" data-close-detail>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="cal-detail-card">
+        <div class="cal-detail-color" id="detail-color"></div>
+        <div class="cal-detail-info">
+          <div class="cal-detail-name" id="detail-name"></div>
+          <div class="cal-detail-date" id="detail-date"></div>
+          <div class="cal-detail-time" id="detail-time" style="display:none"></div>
+          <div class="cal-detail-countdown" id="detail-countdown"></div>
+        </div>
+      </div>
+      <div class="cal-detail-desc" id="detail-desc" style="display:none"></div>
+      <div class="cal-detail-actions">
+        <button class="btn btn-secondary btn-full" id="btn-edit-event">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          Editar
+        </button>
+        <button class="btn btn-danger btn-full" id="btn-delete-event">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-event" class="modal hidden">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-event-title">Nueva fecha especial</h2>
+      <button class="modal-close" id="modal-close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre del evento</label>
+        <input type="text" id="ev-title" placeholder="Cumpleaños de Mario..." maxlength="100" autocomplete="off">
+      </div>
+      <div style="display:flex;gap:1rem">
+        <div class="form-group" style="flex:1">
+          <label>Día</label>
+          <input type="number" id="ev-day" min="1" max="31" placeholder="15">
+        </div>
+        <div class="form-group" style="flex:2">
+          <label>Mes</label>
+          <select id="ev-month" class="form-select">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="cal-allday-row">
+          <input type="checkbox" id="ev-allday" checked>
+          <span>Día completo</span>
+        </label>
+      </div>
+      <div id="ev-time-row" style="display:none;gap:1rem">
+        <div class="form-group" style="flex:1">
+          <label>Hora inicio</label>
+          <input type="time" id="ev-start" class="form-input">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Hora fin <span style="opacity:.6;font-weight:400">(opcional)</span></label>
+          <input type="time" id="ev-end" class="form-input">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción <span style="opacity:.6;font-weight:400">(opcional)</span></label>
+        <textarea id="ev-description" class="form-input" rows="3" maxlength="1000" placeholder="Notas, lugar, detalles…" style="resize:vertical;min-height:72px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div class="color-picker-row" id="color-picker">
+          <button class="color-btn active" data-color="#06b6d4" style="background:#06b6d4"></button>
+          <button class="color-btn" data-color="#f59e0b" style="background:#f59e0b"></button>
+          <button class="color-btn" data-color="#ef4444" style="background:#ef4444"></button>
+          <button class="color-btn" data-color="#10b981" style="background:#10b981"></button>
+          <button class="color-btn" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+          <button class="color-btn" data-color="#ec4899" style="background:#ec4899"></button>
+          <button class="color-btn" data-color="#f97316" style="background:#f97316"></button>
+        </div>
+      </div>
+      <div id="ev-error" class="alert alert-error" style="display:none"></div>
+      <button class="btn btn-primary btn-full" id="btn-save-event">Guardar evento</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = "{{ csrf_token }}";
+const TODAY_DAY = {{ today_day }};
+const TODAY_MONTH = {{ today_month }};
+const TODAY_YEAR = {{ today_year }};
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+let eventsData = [
+  {% for item in events %}
+  { id: {{ item.id }}, title: "{{ item.title|escapejs }}", day: {{ item.day }}, month: {{ item.month }}, color: "{{ item.color|escapejs }}",
+    description: "{{ item.description|default:''|escapejs }}",
+    is_all_day: {% if item.is_all_day %}1{% else %}0{% endif %},
+    start_time: "{{ item.start_time|default:''|escapejs }}",
+    end_time: "{{ item.end_time|default:''|escapejs }}" },
+  {% endfor %}
+];
+
+let viewMonth = TODAY_MONTH;
+let viewYear  = TODAY_YEAR;
+let selectedColor = '#06b6d4';
+let selectedDay   = null;
+let editingId     = null;
+let detailEventId = null;
+
+function esc(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function api(url, body) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, csrf_token: CSRF }) }).then(r => r.json());
+}
+function eventsForMonth(month) { return eventsData.filter(e => e.month === month); }
+
+function buildCalendar() {
+  const wrap = document.getElementById('cal-wrap');
+  const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+  const firstDay = new Date(viewYear, viewMonth - 1, 1).getDay();
+  const adj = (firstDay + 6) % 7;
+  const evMap = {};
+  eventsForMonth(viewMonth).forEach(e => { (evMap[e.day] = evMap[e.day] || []).push(e); });
+  const isCurrentMonth = (viewMonth === TODAY_MONTH && viewYear === TODAY_YEAR);
+  let html = `<div class="cal-month-header">
+      <button type="button" id="cal-prev" aria-label="Mes anterior"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+      <span id="cal-month-label">${MONTH_NAMES[viewMonth-1]} ${viewYear}</span>
+      <div class="cal-month-header-right">
+        ${isCurrentMonth ? '' : '<button type="button" id="cal-today" class="cal-today-btn">Hoy</button>'}
+        <button type="button" id="cal-next" aria-label="Mes siguiente"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></button>
+      </div>
+    </div>`;
+  html += '<div class="cal-grid">';
+  ['L','M','X','J','V','S','D'].forEach(d => { html += `<div class="cal-day-header">${d}</div>`; });
+  for (let i = 0; i < adj; i++) html += '<div class="cal-day-empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = isCurrentMonth && d === TODAY_DAY;
+    const isSelected = (selectedDay === d);
+    const hasEvents = !!evMap[d];
+    const dots = (evMap[d] || []).slice(0,3).map(e => `<span class="cal-dot" style="background:${e.color}"></span>`).join('');
+    const classes = ['cal-day'];
+    if (isToday) classes.push('today');
+    if (isSelected) classes.push('selected');
+    if (hasEvents) classes.push('has-events');
+    html += `<button type="button" class="${classes.join(' ')}" data-day="${d}"><span class="cal-day-num">${d}</span>${dots ? '<div class="cal-dots">' + dots + '</div>' : ''}</button>`;
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+  document.getElementById('cal-prev').addEventListener('click', () => changeMonth(-1));
+  document.getElementById('cal-next').addEventListener('click', () => changeMonth(1));
+  const todayBtn = document.getElementById('cal-today');
+  if (todayBtn) todayBtn.addEventListener('click', goToToday);
+  wrap.querySelectorAll('.cal-day').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = parseInt(btn.dataset.day);
+      selectedDay = (selectedDay === d) ? null : d;
+      buildCalendar(); renderEventsList();
+    });
+  });
+}
+
+function changeMonth(delta) {
+  viewMonth += delta;
+  if (viewMonth < 1)  { viewMonth = 12; viewYear -= 1; }
+  if (viewMonth > 12) { viewMonth = 1;  viewYear += 1; }
+  selectedDay = null;
+  buildCalendar(); renderEventsList();
+}
+function goToToday() {
+  viewMonth = TODAY_MONTH; viewYear = TODAY_YEAR; selectedDay = TODAY_DAY;
+  buildCalendar(); renderEventsList();
+}
+
+function renderEventsList() {
+  const list = document.getElementById('events-list');
+  const title = document.getElementById('events-title');
+  const clearBtn = document.getElementById('cal-clear-filter');
+  let items = eventsForMonth(viewMonth);
+  if (selectedDay !== null) {
+    items = items.filter(e => e.day === selectedDay);
+    title.textContent = `Día ${selectedDay} de ${MONTH_NAMES[viewMonth-1]}`;
+    clearBtn.style.display = '';
+  } else {
+    title.textContent = `Eventos de ${MONTH_NAMES[viewMonth-1]}`;
+    clearBtn.style.display = 'none';
+  }
+  items.sort((a,b) => a.day - b.day);
+  if (items.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <svg width="24" height="24" class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      <p>${selectedDay !== null ? 'Sin eventos este día' : 'Sin eventos este mes'}</p>
+      <p class="empty-sub">${selectedDay !== null ? 'Pulsa otro día o «Ver todos»' : 'Añade cumpleaños y fechas especiales'}</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = items.map(e => {
+    const timeStr = e.is_all_day ? 'Todo el día' : (e.start_time ? (e.start_time + (e.end_time ? ' – ' + e.end_time : '')) : '');
+    return `<div class="cal-event-item" data-id="${e.id}">
+      <div class="cal-event-dot" style="background:${e.color}"></div>
+      <div class="cal-event-info">
+        <span class="cal-event-title">${esc(e.title)}</span>
+        <span class="cal-event-date">${e.day}/${String(e.month).padStart(2,'0')}${timeStr ? ' · ' + esc(timeStr) : ''}</span>
+      </div>
+      <div class="cal-event-chev"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></div>
+    </div>`;
+  }).join('');
+}
+
+function nextOccurrenceDays(day, month) {
+  const today = new Date(TODAY_YEAR, TODAY_MONTH - 1, TODAY_DAY);
+  let target = new Date(TODAY_YEAR, month - 1, day);
+  if (target < today) target = new Date(TODAY_YEAR + 1, month - 1, day);
+  return Math.round((target - today) / 86400000);
+}
+
+function openDetail(eventId) {
+  const ev = eventsData.find(e => e.id === eventId);
+  if (!ev) return;
+  detailEventId = eventId;
+  document.getElementById('detail-title').textContent = ev.title;
+  document.getElementById('detail-name').textContent = ev.title;
+  document.getElementById('detail-date').textContent = `${ev.day} de ${MONTH_NAMES[ev.month-1]}`;
+  document.getElementById('detail-color').style.background = ev.color;
+  const tEl = document.getElementById('detail-time');
+  if (ev.is_all_day) { tEl.textContent = 'Todo el día'; tEl.style.display = ''; }
+  else if (ev.start_time) { tEl.textContent = ev.start_time + (ev.end_time ? ' – ' + ev.end_time : ''); tEl.style.display = ''; }
+  else tEl.style.display = 'none';
+  const dEl = document.getElementById('detail-desc');
+  if (ev.description && ev.description.trim()) { dEl.textContent = ev.description; dEl.style.display = ''; }
+  else { dEl.textContent = ''; dEl.style.display = 'none'; }
+  const days = nextOccurrenceDays(ev.day, ev.month);
+  const cd = document.getElementById('detail-countdown');
+  if (days === 0) cd.textContent = '¡Es hoy!';
+  else if (days === 1) cd.textContent = 'Mañana';
+  else cd.textContent = `Faltan ${days} días`;
+  document.getElementById('modal-detail').classList.remove('hidden');
+}
+function closeDetail() { document.getElementById('modal-detail').classList.add('hidden'); detailEventId = null; }
+function syncAllDayUI() { document.getElementById('ev-time-row').style.display = document.getElementById('ev-allday').checked ? 'none' : 'flex'; }
+
+function openEditor(eventId) {
+  editingId = eventId || null;
+  document.getElementById('ev-error').style.display = 'none';
+  const allDayEl = document.getElementById('ev-allday');
+  const startEl = document.getElementById('ev-start');
+  const endEl = document.getElementById('ev-end');
+  const descEl = document.getElementById('ev-description');
+  if (eventId) {
+    const ev = eventsData.find(e => e.id === eventId);
+    if (!ev) return;
+    document.getElementById('modal-event-title').textContent = 'Editar evento';
+    document.getElementById('ev-title').value = ev.title;
+    document.getElementById('ev-day').value = ev.day;
+    document.getElementById('ev-month').value = ev.month;
+    selectedColor = ev.color;
+    allDayEl.checked = !!ev.is_all_day;
+    startEl.value = ev.start_time || '';
+    endEl.value = ev.end_time || '';
+    descEl.value = ev.description || '';
+  } else {
+    document.getElementById('modal-event-title').textContent = 'Nueva fecha especial';
+    document.getElementById('ev-title').value = '';
+    document.getElementById('ev-day').value = selectedDay || TODAY_DAY;
+    document.getElementById('ev-month').value = viewMonth || TODAY_MONTH;
+    selectedColor = '#06b6d4';
+    allDayEl.checked = true;
+    startEl.value = ''; endEl.value = ''; descEl.value = '';
+  }
+  syncAllDayUI();
+  document.querySelectorAll('.color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === selectedColor));
+  document.getElementById('modal-event').classList.remove('hidden');
+  setTimeout(() => document.getElementById('ev-title').focus(), 50);
+}
+function closeEditor() {
+  document.getElementById('modal-event').classList.add('hidden');
+  document.getElementById('ev-error').style.display = 'none';
+  editingId = null;
+}
+
+buildCalendar();
+renderEventsList();
+
+document.getElementById('btn-add-event').addEventListener('click', () => openEditor(null));
+document.getElementById('cal-clear-filter').addEventListener('click', () => { selectedDay = null; buildCalendar(); renderEventsList(); });
+document.getElementById('modal-close').addEventListener('click', closeEditor);
+document.getElementById('modal-backdrop').addEventListener('click', closeEditor);
+document.querySelectorAll('[data-close-detail]').forEach(el => el.addEventListener('click', closeDetail));
+
+document.getElementById('btn-edit-event').addEventListener('click', () => {
+  const id = detailEventId; closeDetail(); if (id) openEditor(id);
+});
+document.getElementById('btn-delete-event').addEventListener('click', async () => {
+  if (!detailEventId) return;
+  if (!confirm('¿Eliminar este evento?')) return;
+  const res = await api('/api/calendar/delete', { id: detailEventId });
+  if (res.success) {
+    eventsData = eventsData.filter(e => e.id !== detailEventId);
+    closeDetail(); buildCalendar(); renderEventsList();
+  } else alert(res.error || 'Error al eliminar');
+});
+
+document.getElementById('color-picker').addEventListener('click', e => {
+  const btn = e.target.closest('.color-btn');
+  if (!btn) return;
+  document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedColor = btn.dataset.color;
+});
+document.getElementById('ev-allday').addEventListener('change', syncAllDayUI);
+
+document.getElementById('btn-save-event').addEventListener('click', async () => {
+  const title = document.getElementById('ev-title').value.trim();
+  const day = parseInt(document.getElementById('ev-day').value);
+  const month = parseInt(document.getElementById('ev-month').value);
+  const isAllDay = document.getElementById('ev-allday').checked;
+  const startTime = document.getElementById('ev-start').value;
+  const endTime = document.getElementById('ev-end').value;
+  const description = document.getElementById('ev-description').value;
+  const errEl = document.getElementById('ev-error');
+  if (!title) { errEl.textContent = 'Añade un nombre'; errEl.style.display = ''; return; }
+  if (!day || day < 1 || day > 31) { errEl.textContent = 'Día inválido'; errEl.style.display = ''; return; }
+  if (!month || month < 1 || month > 12) { errEl.textContent = 'Mes inválido'; errEl.style.display = ''; return; }
+  if (!isAllDay && !startTime) { errEl.textContent = 'Indica una hora de inicio o marca «Día completo»'; errEl.style.display = ''; return; }
+  if (!isAllDay && endTime && endTime <= startTime) { errEl.textContent = 'La hora de fin debe ser posterior a la de inicio'; errEl.style.display = ''; return; }
+  errEl.style.display = 'none';
+  const payload = { title, day, month, color: selectedColor, description, is_all_day: isAllDay,
+    start_time: isAllDay ? '' : startTime, end_time: isAllDay ? '' : endTime };
+  let res;
+  if (editingId) {
+    res = await api('/api/calendar/update', { id: editingId, ...payload });
+    if (res.success) {
+      const ev = eventsData.find(e => e.id === editingId);
+      if (ev) Object.assign(ev, { title, day, month, color: selectedColor, description,
+        is_all_day: isAllDay ? 1 : 0, start_time: payload.start_time, end_time: payload.end_time });
+    }
+  } else {
+    res = await api('/api/calendar/add', payload);
+    if (res.success) eventsData.push({ id: res.id, title, day, month, color: selectedColor, description,
+      is_all_day: isAllDay ? 1 : 0, start_time: payload.start_time, end_time: payload.end_time });
+  }
+  if (res.success) {
+    closeEditor(); viewMonth = month; viewYear = TODAY_YEAR; selectedDay = null;
+    buildCalendar(); renderEventsList();
+  } else { errEl.textContent = res.error || 'Error'; errEl.style.display = ''; }
+});
+
+document.getElementById('events-list').addEventListener('click', e => {
+  const row = e.target.closest('.cal-event-item');
+  if (!row) return;
+  openDetail(parseInt(row.dataset.id));
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!document.getElementById('modal-detail').classList.contains('hidden')) closeDetail();
+  else if (!document.getElementById('modal-event').classList.contains('hidden')) closeEditor();
+});
+</script>
+{% endblock %}

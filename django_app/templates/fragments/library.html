@@ -1,0 +1,79 @@
+<div class="page-library">
+  <div class="page-header">
+    <h2>Mi Biblioteca</h2>
+    <button class="btn-add-song" id="open-add-modal" title="Añadir canción">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <svg width="24" height="24" class="search-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" id="search-input" placeholder="Buscar canciones, artistas..."
+           value="{{ search }}" autocomplete="off">
+    {% if search %}
+    <button class="search-clear" id="search-clear">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+    {% endif %}
+  </div>
+
+  {% if not songs %}
+  <div class="empty-state">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="empty-icon"><path d="M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+    {% if search %}
+    <p>No se encontraron canciones para "{{ search }}"</p>
+    {% else %}
+    <p>Tu biblioteca está vacía</p>
+    <p class="empty-sub">Toca <strong>+</strong> para añadir tu primera canción de YouTube</p>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="songs-count">{{ songs|length }} canción{% if songs|length != 1 %}es{% endif %}</div>
+  <ul class="song-list" id="song-list">
+    {% for song in songs %}
+    <li class="song-item" data-song-id="{{ song.id }}" data-index="{{ forloop.counter0 }}">
+      <div class="song-thumb-wrap">
+        {% if song.thumbnail %}
+        <img src="{{ song.thumbnail }}" alt="" class="song-thumb" loading="lazy">
+        {% else %}
+        <div class="song-thumb-placeholder">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+        </div>
+        {% endif %}
+        <div class="song-play-overlay">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div class="song-info">
+        <div class="song-title">{{ song.title }}</div>
+        <div class="song-artist">{{ song.artist }}</div>
+      </div>
+      <div class="song-meta">
+        {% if song.duration and song.duration > 0 %}
+        <span class="song-duration">{{ song.duration|format_duration }}</span>
+        {% endif %}
+        <button class="song-menu-btn" data-song-id="{{ song.id }}" title="Opciones">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+        </button>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <!-- Context menu -->
+  <div id="song-context-menu" class="context-menu hidden">
+    <button class="ctx-item ctx-play" id="ctx-play">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      Reproducir
+    </button>
+    <button class="ctx-item ctx-delete" id="ctx-delete">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+      Eliminar canción
+    </button>
+  </div>
+</div>
+
+<script>
+window._librarySongs = {{ songs_json|safe }};
+</script>
