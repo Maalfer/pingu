@@ -26,7 +26,7 @@ def index(request):
         related_ids.add(f.addressee_id)
     related_ids.add(me.id)
     others = User.objects.exclude(pk__in=related_ids)
-    return render(request, "friends.html", {
+    return render(request, "friends/friends.html", {
         "accepted": accepted, "received": received, "sent": sent, "others": others,
     })
 

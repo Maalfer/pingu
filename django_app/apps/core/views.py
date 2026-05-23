@@ -38,7 +38,7 @@ def home(request):
     todos_count = Todo.objects.filter(user=user, done=False).count()
     unread_msgs = Message.objects.filter(receiver=user, read_at__isnull=True).count()
     videos_count = Video.objects.filter(user=user, status="downloading").count()
-    return render(request, "home.html", {
+    return render(request, "core/home.html", {
         "pending_friends": pending_friends,
         "shopping_count": shopping_count,
         "todos_count": todos_count,
@@ -258,7 +258,7 @@ def manifest(request):
 def admin_panel(request):
     users = User.objects.all().order_by("-date_joined")
     invites = InviteToken.objects.filter(is_used=False).order_by("-created_at")[:50]
-    return render(request, "admin_panel.html", {"users": users, "invites": invites})
+    return render(request, "accounts/admin_panel.html", {"users": users, "invites": invites})
 
 
 @login_required

@@ -14,6 +14,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST, require_GET
 
+from apps.core.api import error_response as _err, parse_json_body
 from .models import User, InviteToken, ActivityLog
 
 log = logging.getLogger(__name__)
@@ -25,10 +26,6 @@ admin_only = staff_member_required(login_url="/")
 
 def _log(user, action, detail=""):
     ActivityLog.objects.create(user=user, username=user.username, action=action, detail=detail)
-
-
-def _err(msg, status=400):
-    return JsonResponse({"error": msg}, status=status)
 
 
 @admin_only

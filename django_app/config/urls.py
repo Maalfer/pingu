@@ -25,7 +25,9 @@ urlpatterns = [
     path("files/", include("apps.files_app.urls")),
     # /push/ ya no expone URLs propias (las APIs viven en /api/push/).
 
-    # APIs montadas al mismo path que el FastAPI antiguo (compat. del JS frontend).
+    # APIs JSON por app. La nomenclatura de las rutas la fija el frontend, así
+    # que mantenemos `vault` para notas (la app interna se llama notes pero la
+    # URL pública es /api/vault/ por compatibilidad histórica con el JS).
     path("api/vault/",    include("apps.notes.api_urls")),
     path("api/files/",    include("apps.files_app.api_urls")),
     path("api/videos/",   include("apps.videos.api_urls")),
@@ -38,7 +40,7 @@ urlpatterns = [
     path("api/gastos/",   include("apps.gastos.api_urls")),
     path("api/friends/",  include("apps.friends.api_urls")),
     path("api/profile/",  include("apps.accounts.profile_urls")),
-    # /api/stream/<id>, /api/download, /api/delete  (paths "huérfanos" del FastAPI)
+    # Música: /api/stream/<id>, /api/download, /api/delete (cuelgan de /api/ sin sub-prefijo).
     path("api/",          include("apps.music.api_urls")),
     # /fragments/library  (router SPA del music app)
     path("fragments/<str:page>", core_views.music_fragment),

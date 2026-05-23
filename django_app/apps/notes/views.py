@@ -16,6 +16,8 @@ from django.http import (
 from django.shortcuts import render
 from django.views.decorators.http import require_POST, require_GET
 
+from apps.core.api import error_response as _err, parse_json_body
+
 
 # ════════════ Helpers ════════════
 
@@ -88,16 +90,12 @@ def _build_tree(root: Path, directory: Path) -> list:
     return items
 
 
-def _err(msg, status=400):
-    return JsonResponse({"error": msg}, status=status)
-
-
 # ════════════ Views ════════════
 
 @login_required
 def index(request):
     _user_root(request)  # asegura directorio
-    return render(request, "notes.html", {})
+    return render(request, "notes/notes.html", {})
 
 
 @login_required

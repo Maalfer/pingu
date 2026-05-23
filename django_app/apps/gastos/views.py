@@ -33,7 +33,7 @@ def index(request):
     for f in friendships:
         other = f.addressee if f.requester == me else f.requester
         rows.append({"friendship": f, "friend": other, "balance": _balance_for(f, me)})
-    return render(request, "gastos.html", {"friends": rows})
+    return render(request, "gastos/gastos.html", {"friends": rows})
 
 
 @login_required
@@ -45,11 +45,11 @@ def detail(request, friend_id):
         status="accepted"
     ).first()
     if not friendship:
-        return render(request, "gastos_detail.html", {
+        return render(request, "gastos/detail.html", {
             "friend": other, "transactions": [], "balance": 0
         })
     transactions = friendship.transactions.all().order_by("-created_at")
-    return render(request, "gastos_detail.html", {
+    return render(request, "gastos/detail.html", {
         "friend": other, "transactions": transactions,
         "balance": _balance_for(friendship, me),
         "friendship": friendship,

@@ -4,7 +4,6 @@ Los archivos físicos viven en settings.BALUHOME_UPLOADS_ROOT/files/<user_id>/<f
 Los metadatos (nombre, padre, mime, tamaño) están en la tabla FileNode.
 """
 import logging
-import re
 import urllib.parse
 from pathlib import Path
 
@@ -14,6 +13,7 @@ from django.http import FileResponse, Http404, JsonResponse, StreamingHttpRespon
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.core.api import error_response as _err, parse_json_body as _parse_json, safe_filename as _safe_name
 from .models import FileNode
 
 log = logging.getLogger(__name__)
@@ -31,12 +31,6 @@ MAX_FILE_SIZE = 1024 * 1024 * 1024  # 1 GB
 
 def _files_root() -> Path:
     return settings.BALUHOME_UPLOADS_ROOT / "files"
-
-
-def _safe_name(name: str) -> str:
-    name = (name or "").strip()
-    name = re.sub(r"[\x00-\x1f/\\]+", "", name)
-    return name[:200] or "Sin nombre"
 
 
 def _serialize(node: FileNode) -> dict:
@@ -99,23 +93,11 @@ def _collect_storage_paths(root_node: FileNode, user) -> list:
     return paths
 
 
-def _err(msg, status=400):
-    return JsonResponse({"error": msg}, status=status)
-
-
-def _parse_json(request):
-    import json
-    try:
-        return json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return {}
-
-
 # ════════════ Views ════════════
 
 @login_required
 def index(request):
-    return render(request, "files.html", {})
+    return render(request, "files_app/files.html", {})
 
 
 @login_required

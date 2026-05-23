@@ -1,16 +1,15 @@
-"""Hasher compatible con los bcrypt hashes del proyecto FastAPI antiguo.
+"""Hasher compatible con los bcrypt hashes heredados (formato `$2b$…`).
 
-Los usuarios actuales tienen passwords almacenados como bcrypt (formato `$2b$…`).
-Django no los entiende por defecto: con este hasher Django puede verificar
-contraseñas existentes. Al primer login exitoso, Django re-hashea con su algoritmo
-por defecto (pbkdf2_sha256), migrando gradualmente sin que el usuario note nada.
+Django no los reconoce por defecto. Con este hasher puede verificar contraseñas
+existentes y, al primer login con éxito, Django las re-hashea con su algoritmo
+por defecto (pbkdf2_sha256) — migración gradual transparente para el usuario.
 """
 import bcrypt
 from django.contrib.auth.hashers import BasePasswordHasher
 
 
 class BCryptLegacyHasher(BasePasswordHasher):
-    """Acepta hashes bcrypt sin prefijo Django (como vienen del FastAPI antiguo)."""
+    """Acepta hashes bcrypt sin el prefijo de algoritmo que Django añade por defecto."""
 
     algorithm = "bcrypt_legacy"
 

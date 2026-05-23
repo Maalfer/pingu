@@ -127,7 +127,7 @@ USE_TZ = True
 # ── Static / Media ────────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", "/var/www/balusong/static_collected"))
+STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / "static_collected"))
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"

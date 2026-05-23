@@ -14,7 +14,7 @@ from .models import Song
 
 @login_required
 def index(request):
-    return render(request, "app.html", {})
+    return render(request, "music/app.html", {})
 
 
 @login_required
@@ -26,7 +26,7 @@ def fragment(request, page):
         if q:
             songs = songs.filter(Q(title__icontains=q) | Q(artist__icontains=q))
         songs_list = list(songs.values("id", "title", "artist", "thumbnail", "duration", "file_path"))
-        return render(request, "fragments/library.html", {
+        return render(request, "music/fragments/library.html", {
             "songs": songs, "search": q,
             "songs_json": json.dumps(songs_list),
         })

@@ -14,3 +14,6 @@ class PushSubscription(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return f"{self.user.username} · {self.endpoint[:30]}…"

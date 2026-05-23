@@ -28,7 +28,7 @@ def index(request):
         unread = Message.objects.filter(sender=other, receiver=me, read_at__isnull=True).count()
         convos.append({"friend": other, "last_msg": last, "unread": unread})
     convos.sort(key=lambda c: c["last_msg"].created_at if c["last_msg"] else timezone.now(), reverse=True)
-    return render(request, "chat.html", {"conversations": convos})
+    return render(request, "chat/chat.html", {"conversations": convos})
 
 
 @login_required
@@ -42,7 +42,7 @@ def detail(request, friend_id):
     Message.objects.filter(sender=other, receiver=me, read_at__isnull=True).update(
         read_at=timezone.now()
     )
-    return render(request, "chat_detail.html", {"other_user": other, "messages": msgs})
+    return render(request, "chat/detail.html", {"other_user": other, "messages": msgs})
 
 
 @login_required

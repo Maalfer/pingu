@@ -8,7 +8,7 @@ from .models import Todo
 
 @login_required
 def index(request):
-    return render(request, "todos.html", {"items": request.user.todos.all()})
+    return render(request, "todos/todos.html", {"items": request.user.todos.all()})
 
 
 @login_required

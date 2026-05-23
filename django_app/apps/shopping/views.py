@@ -10,7 +10,7 @@ from .models import ShoppingItem
 @login_required
 def index(request):
     items = request.user.shopping_items.all()
-    return render(request, "shopping.html", {"items": items})
+    return render(request, "shopping/shopping.html", {"items": items})
 
 
 @login_required

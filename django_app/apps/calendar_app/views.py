@@ -9,7 +9,7 @@ from .models import CalendarEvent
 @login_required
 def index(request):
     today = datetime.date.today()
-    return render(request, "calendar.html", {
+    return render(request, "calendar_app/calendar.html", {
         "events": request.user.calendar_events.all(),
         "today_day": today.day, "today_month": today.month, "today_year": today.year,
     })

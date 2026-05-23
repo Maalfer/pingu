@@ -20,6 +20,7 @@ from django.http import (
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST, require_GET
 
+from apps.core.api import error_response as _err
 from .models import Video
 
 
@@ -40,10 +41,6 @@ _stream_tokens: dict = {}
 
 def _videos_root() -> Path:
     return settings.BALUHOME_VIDEOS_ROOT
-
-
-def _err(msg, status=400):
-    return JsonResponse({"error": msg}, status=status)
 
 
 def _find_video_file(directory: Path) -> Optional[Path]:
@@ -179,7 +176,7 @@ def _fetch_torrent_url(url: str) -> dict:
 
 @login_required
 def index(request):
-    return render(request, "videos.html", {"videos": request.user.videos.all()})
+    return render(request, "videos/videos.html", {"videos": request.user.videos.all()})
 
 
 @login_required
@@ -258,7 +255,7 @@ def add(request):
         user=request.user, title=title, status="downloading",
         torrent_source=magnet or Path(source).name,
     )
-    # Background thread (similar a executor de FastAPI).
+    # Background thread (daemon): la descarga sigue mientras se devuelve la response.
     threading.Thread(
         target=_do_torrent_download,
         args=(v.id, source, is_file_path),
