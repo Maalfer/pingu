@@ -17,4 +17,6 @@ urlpatterns = [
     path("asset", views.asset, name="asset"),
     path("export", views.export_vault, name="export"),
     path("import", views.import_vault, name="import"),
+    path("storage", views.storage, name="storage"),
+    path("optimize-images", views.optimize_images, name="optimize_images"),
 ]

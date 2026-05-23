@@ -237,6 +237,146 @@ def delete(request):
     return JsonResponse({"success": True})
 
 
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".heic", ".avif"}
+_NOTE_EXTS = {".md"}
+
+
+@login_required
+@require_GET
+def storage(request):
+    """Devuelve estadísticas de la bóveda: total, desglose y conteos."""
+    root = _user_root(request)
+    total_bytes = 0
+    notes_bytes = 0
+    images_bytes = 0
+    other_bytes = 0
+    n_notes = 0
+    n_images = 0
+    n_other = 0
+    n_folders = 0
+    for p in root.rglob("*"):
+        try:
+            if p.is_dir():
+                if not p.name.startswith("."):
+                    n_folders += 1
+                continue
+            size = p.stat().st_size
+        except OSError:
+            continue
+        total_bytes += size
+        ext = p.suffix.lower()
+        if ext in _NOTE_EXTS:
+            notes_bytes += size; n_notes += 1
+        elif ext in _IMAGE_EXTS:
+            images_bytes += size; n_images += 1
+        else:
+            other_bytes += size; n_other += 1
+    return JsonResponse({
+        "success": True,
+        "total_bytes": total_bytes,
+        "notes_bytes": notes_bytes,
+        "images_bytes": images_bytes,
+        "other_bytes": other_bytes,
+        "n_notes": n_notes,
+        "n_images": n_images,
+        "n_other": n_other,
+        "n_folders": n_folders,
+    })
+
+
+@login_required
+@require_POST
+def optimize_images(request):
+    """Recodifica TODAS las imágenes ráster de la bóveda a WebP, in-place.
+
+    Pasos:
+    1. Por cada imagen no-WebP/gif/svg, recodifica a WebP. Si el WebP NO
+       reduce tamaño, se descarta y se mantiene el original.
+    2. Para las imágenes recodificadas, renombra el archivo a .webp.
+    3. Recorre todos los .md y reemplaza referencias al nombre antiguo por
+       el nuevo (con regex que cubre wikilink + markdown image + raw path).
+
+    Devuelve un resumen: archivos procesados, bytes ahorrados.
+    """
+    import io
+    import re as _re
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return _err("Pillow no instalado", 500)
+    root = _user_root(request)
+    converted = 0           # imágenes recodificadas a WebP
+    skipped = 0             # imágenes que ya eran webp/gif/svg o no se redujeron
+    saved_bytes = 0
+    renames = []            # [(old_name_no_ext, old_name_full, new_name_full)]
+
+    for img_path in list(root.rglob("*")):
+        if not img_path.is_file():
+            continue
+        ext = img_path.suffix.lower()
+        if ext in {".webp", ".gif", ".svg", ".ico"} or ext not in _IMAGE_EXTS:
+            continue
+        try:
+            orig_size = img_path.stat().st_size
+            with img_path.open("rb") as fp:
+                img = Image.open(fp)
+                img.load()
+            img = ImageOps.exif_transpose(img)
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA" if "A" in img.mode else "RGB")
+            buf = io.BytesIO()
+            img.save(buf, "WEBP", quality=85, method=6)
+            new_data = buf.getvalue()
+        except Exception:
+            skipped += 1
+            continue
+        if len(new_data) >= orig_size:
+            skipped += 1
+            continue
+        # Escribir nuevo .webp y borrar el original
+        new_path = img_path.with_suffix(".webp")
+        # Si el .webp ya existe (caso raro), añadir sufijo numérico
+        if new_path.exists() and new_path != img_path:
+            i = 2
+            while img_path.with_name(f"{img_path.stem} {i}.webp").exists():
+                i += 1
+            new_path = img_path.with_name(f"{img_path.stem} {i}.webp")
+        new_path.write_bytes(new_data)
+        if new_path != img_path:
+            try:
+                img_path.unlink()
+            except OSError:
+                pass
+        saved_bytes += orig_size - len(new_data)
+        converted += 1
+        renames.append((img_path.name, new_path.name))
+
+    # Actualizar referencias en cada .md de la bóveda.
+    if renames:
+        for md in root.rglob("*.md"):
+            try:
+                text = md.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            new_text = text
+            for old_name, new_name in renames:
+                if old_name == new_name:
+                    continue
+                # Reemplazo literal del nombre exacto. La mayoría de embeds en
+                # notas Obsidian son `![[name.png]]`, `![](Adjuntos/name.png)`,
+                # `<img src="...name.png">` — todos contienen el nombre completo.
+                new_text = new_text.replace(old_name, new_name)
+            if new_text != text:
+                md.write_text(new_text, encoding="utf-8")
+
+    return JsonResponse({
+        "success": True,
+        "converted": converted,
+        "skipped": skipped,
+        "saved_bytes": saved_bytes,
+    })
+
+
 @login_required
 @require_GET
 def search(request):

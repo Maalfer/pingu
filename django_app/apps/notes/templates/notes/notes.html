@@ -476,6 +476,11 @@
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM12 2 6.5 9h3.5v6h4V9h3.5L12 2z"/></svg>
             Importar bóveda
           </button>
+          <div class="vsm-sep"></div>
+          <button class="vsm-item" id="vsm-storage">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/></svg>
+            Almacenamiento
+          </button>
         </div>
       </div>
       <!-- Botones fantasma: mantienen los event listeners del JS sin ser visibles -->
@@ -569,6 +574,38 @@
     <div id="imgdir-list" class="imgdir-list"></div>
     <div class="modal-actions">
       <button class="btn-cancel" id="imgdir-cancel">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Almacenamiento de la bóveda -->
+<div class="modal-back" id="storage-modal">
+  <div class="modal">
+    <h3>Almacenamiento de la bóveda</h3>
+    <div id="storage-loading" class="storage-loading">Calculando…</div>
+    <div id="storage-body" class="storage-body" style="display:none">
+      <div class="storage-total">
+        <span class="storage-total-label">Tamaño total</span>
+        <span class="storage-total-val" id="storage-total">—</span>
+      </div>
+      <div class="storage-rows" id="storage-rows"></div>
+      <div class="storage-foot">
+        <span id="storage-files">—</span>
+        <span id="storage-folders">—</span>
+      </div>
+      <div class="storage-action">
+        <button class="btn-primary" id="btn-optimize-images">Optimizar imágenes…</button>
+        <small class="storage-hint">Hace un backup primero y después recodifica las imágenes a WebP.</small>
+      </div>
+      <div id="storage-progress" class="storage-progress" style="display:none">
+        <div class="storage-progress-msg" id="storage-progress-msg">Trabajando…</div>
+        <div class="storage-progress-bar"><div class="storage-progress-bar-fill"></div></div>
+      </div>
+      <div id="storage-result" class="alert alert-success" style="display:none"></div>
+    </div>
+    <div id="storage-err" class="alert alert-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="storage-cancel">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1542,6 +1579,128 @@ $('btn-img-dir').addEventListener('click', toggleVaultSettingsMenu);
 $('vsm-imgdir').addEventListener('click', () => { closeVaultSettingsMenu(); openImgDirModal(); });
 $('vsm-export').addEventListener('click', () => { closeVaultSettingsMenu(); if(dirty) saveNow(); window.location='/api/notes/export'; });
 $('vsm-import').addEventListener('click', () => { closeVaultSettingsMenu(); openImport(); });
+$('vsm-storage').addEventListener('click', () => { closeVaultSettingsMenu(); openStorageModal(); });
+
+/* ════════════ Modal de Almacenamiento ════════════ */
+function fmtBytes(n) {
+  n = +n || 0;
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+}
+async function openStorageModal() {
+  $('storage-modal').classList.add('show');
+  $('storage-body').style.display = 'none';
+  $('storage-err').style.display = 'none';
+  $('storage-loading').style.display = '';
+  $('storage-progress').style.display = 'none';
+  $('storage-result').style.display = 'none';
+  try {
+    const r = await fetch('/api/notes/storage').then(x => x.json());
+    if (!r.success) throw new Error(r.error || 'Error');
+    $('storage-loading').style.display = 'none';
+    $('storage-body').style.display = '';
+    renderStorageStats(r);
+  } catch (e) {
+    $('storage-loading').style.display = 'none';
+    $('storage-err').textContent = e.message || 'No se pudo calcular el almacenamiento';
+    $('storage-err').style.display = '';
+  }
+}
+function renderStorageStats(s) {
+  $('storage-total').textContent = fmtBytes(s.total_bytes);
+  const totalNonZero = Math.max(1, s.total_bytes);
+  const rows = [
+    {label: 'Notas Markdown', n: s.n_notes, bytes: s.notes_bytes, color: '#22c55e'},
+    {label: 'Imágenes', n: s.n_images, bytes: s.images_bytes, color: '#06b6d4'},
+    {label: 'Otros archivos', n: s.n_other, bytes: s.other_bytes, color: '#a855f7'},
+  ];
+  let html = '';
+  for (const row of rows) {
+    const pct = (row.bytes / totalNonZero) * 100;
+    html += `<div class="storage-row">
+      <div class="storage-row-head">
+        <span class="storage-row-label" style="color:${row.color}">●</span>
+        <span class="storage-row-label">${row.label}</span>
+        <span class="storage-row-meta">${row.n} archivo${row.n===1?'':'s'} · ${fmtBytes(row.bytes)}</span>
+      </div>
+      <div class="storage-row-bar"><div class="storage-row-bar-fill" style="width:${pct.toFixed(1)}%;background:${row.color}"></div></div>
+    </div>`;
+  }
+  $('storage-rows').innerHTML = html;
+  $('storage-files').textContent = `${s.n_notes + s.n_images + s.n_other} archivos`;
+  $('storage-folders').textContent = `${s.n_folders} carpetas`;
+}
+$('storage-cancel').addEventListener('click', () => $('storage-modal').classList.remove('show'));
+
+/* ── Optimizar imágenes (backup zip + recode WebP + rewrite refs) ──────── */
+$('btn-optimize-images').addEventListener('click', async () => {
+  const btn = $('btn-optimize-images');
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = 'Descargando backup…';
+  $('storage-progress').style.display = '';
+  $('storage-progress-msg').textContent = 'Generando backup ZIP de toda la bóveda…';
+
+  // 1) Descargar export (zip) y bloquear hasta que termine.
+  let blob;
+  try {
+    const r = await fetch('/api/notes/export');
+    if (!r.ok) throw new Error('No se pudo generar el backup');
+    blob = await r.blob();
+  } catch (e) {
+    $('storage-progress').style.display = 'none';
+    alert('Error generando backup: ' + e.message + '\n\nNo se ha optimizado nada.');
+    btn.disabled = false; btn.textContent = prev;
+    return;
+  }
+  // Guardar zip al disco del usuario
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const today = new Date().toISOString().slice(0, 10);
+  a.download = `boveda-backup-${today}.zip`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+
+  // 2) Confirmación
+  if (!confirm('Backup descargado.\n\n¿Lanzar la optimización? Las imágenes ráster (jpg/png/bmp/tiff/heic/avif) se recodificarán a WebP. Las referencias en tus notas se actualizan automáticamente.\n\nEsta operación es reversible importando el backup que acabas de descargar.')) {
+    $('storage-progress').style.display = 'none';
+    btn.disabled = false; btn.textContent = prev;
+    return;
+  }
+
+  // 3) Ejecutar bulk
+  btn.textContent = 'Optimizando…';
+  $('storage-progress-msg').textContent = 'Recodificando imágenes y actualizando notas…';
+  try {
+    const r = await fetch('/api/notes/optimize-images', { method: 'POST' }).then(x => x.json());
+    if (!r.success) throw new Error(r.error || 'Error');
+    $('storage-progress').style.display = 'none';
+    const out = $('storage-result');
+    out.style.display = '';
+    out.textContent = `${r.converted} imágenes optimizadas, ${r.skipped} omitidas. Ahorrado: ${fmtBytes(r.saved_bytes)}.`;
+    // Refrescar stats
+    const s = await fetch('/api/notes/storage').then(x => x.json());
+    if (s.success) renderStorageStats(s);
+    // Refrescar árbol/contenido por si las extensiones cambiaron
+    await loadTree();
+    if (current) {
+      const oldPath = current.path;
+      const candidate = oldPath.replace(/\.(jpe?g|png|bmp|tiff?|heic|avif)$/i, '.webp');
+      openNote(candidate);
+    }
+  } catch (e) {
+    $('storage-progress').style.display = 'none';
+    const err = $('storage-err');
+    err.textContent = 'Error: ' + e.message;
+    err.style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
+  }
+});
 document.addEventListener('click', e => {
   if (!$('vault-settings-wrap').contains(e.target)) closeVaultSettingsMenu();
 });
