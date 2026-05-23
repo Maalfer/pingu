@@ -5454,3 +5454,10 @@ body.subapp-body:not(.subapp-body-shop):not(.chat-app-body) .subapp-content {
 .player-btn:hover { background: var(--bg3); }
 .player-btn-play { background: var(--cyan); color: #000; }
 .player-btn-play:hover { background: var(--cyan-hover, var(--cyan)); }
+
+/* Página de música: header con varios botones (añadir + limpiar caché) */
+.page-header-actions { display: flex; gap: .5rem; align-items: center; }
+.btn-cache-clear { background: var(--bg3); color: var(--text2); }
+.btn-cache-clear:hover { background: var(--bg4); color: var(--cyan); }
+.btn-cache-clear:disabled { opacity: .6; cursor: wait; }
+.btn-cache-clear .spinner { margin: 0; }

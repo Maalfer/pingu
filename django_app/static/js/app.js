@@ -67,9 +67,34 @@ const Library = {
     this.bindSearch();
     this.bindSongList();
     this.bindContextMenu();
+    this.bindCacheClear();
 
     const addBtn = document.getElementById('open-add-modal');
     if (addBtn) addBtn.addEventListener('click', () => Modal.open());
+  },
+
+  bindCacheClear() {
+    const btn = document.getElementById('btn-clear-music-cache');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Borrar las canciones descargadas en este dispositivo?\n\nVolverás a oírlas desde el servidor la próxima vez.')) return;
+      btn.disabled = true;
+      const prev = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div>';
+      try {
+        // Borrado directo (por si el SW no contesta) + ping al SW para que limpie su referencia interna.
+        if ('caches' in window) await caches.delete('pingu-music-v1').catch(() => {});
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'clear-music-cache' });
+        }
+        // Feedback visual: cambiar a tick durante 1.2s.
+        btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 1200);
+      } catch (e) {
+        btn.innerHTML = prev; btn.disabled = false;
+        alert('No se pudo borrar la caché: ' + e.message);
+      }
+    });
   },
 
   bindSearch() {
